@@ -575,6 +575,8 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 const SVC = 'https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer';
 const LIDAR_INDEX = 'https://index.nationalmap.gov/arcgis/rest/services/3DEPElevationIndex/MapServer/8/query';
 const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services';
+// Esri's tile hosts speak HTTP/1.1 (6 requests at a time per host), so spread tiles over both names for the same service
+const ESRI_T = 'https://{s}.arcgisonline.com/ArcGIS/rest/services', ESRI_SUB = ['server', 'services'];
 const M2FT = 3.28084, ACRE_M2 = 4046.8564, YD3_M3 = 0.764555, R = 20037508.342789244;
 const $ = id => document.getElementById(id);
 // The app was called GradeScout: carry saved fields, pins and the tour flag over to the new keys once
@@ -682,19 +684,26 @@ for (const [name, z] of [['lidar', 300], ['contours', 320], ['field', 380], ['la
 map.getPane('labels').style.pointerEvents = 'none';
 
 const labels = L.layerGroup(['Reference/World_Transportation', 'Reference/World_Boundaries_and_Places'].map(s =>
-  L.tileLayer(`${ESRI}/${s}/MapServer/tile/{z}/{y}/{x}`, { pane: 'labels', maxZoom: 21, maxNativeZoom: 19 })));
+  L.tileLayer(`${ESRI_T}/${s}/MapServer/tile/{z}/{y}/{x}`, { pane: 'labels', subdomains: ESRI_SUB, maxZoom: 21, maxNativeZoom: 19 })));
 
-// Tile layer that asks the 3DEP ImageServer to render each 256px web-mercator tile on the fly.
+// Image services render every tile on request, which takes a second or more however small the tile is,
+// so ask for 512px tiles: a quarter as many round trips as 256px ones for the same map.
+function tileBox(layer, c) {
+  const ts = layer.getTileSize().x, span = 2 * R * ts / (256 * 2 ** c.z), xmin = -R + c.x * span, ymax = R - c.y * span;
+  return { ts, bbox: [xmin, ymax - span, xmin + span, ymax].map(v => v.toFixed(2)).join(',') };
+}
+// Tile layer that asks the 3DEP ImageServer to render each web-mercator tile on the fly.
+// Shaded relief is opaque, so it comes back as JPEG (about a tenth the size of PNG); contours need PNG's transparency.
 const ExportLayer = L.TileLayer.extend({
+  options: { tileSize: 512, format: 'jpgpng' },
   getTileUrl(c) {
-    const res = 2 * R / (256 * 2 ** c.z), xmin = -R + c.x * 256 * res, ymax = R - c.y * 256 * res;
-    const bbox = [xmin, ymax - 256 * res, xmin + 256 * res, ymax].map(v => v.toFixed(2)).join(',');
-    return `${SVC}/exportImage?f=image&format=png32&bbox=${bbox}&bboxSR=3857&imageSR=3857&size=256,256` +
+    const { ts, bbox } = tileBox(this, c);
+    return `${SVC}/exportImage?f=image&format=${this.options.format}&bbox=${bbox}&bboxSR=3857&imageSR=3857&size=${ts},${ts}` +
       `&renderingRule=${encodeURIComponent(JSON.stringify({ rasterFunction: this.options.rule }))}`;
   }
 });
 const lidarLayer = new ExportLayer('', { pane: 'lidar', rule: 'Hillshade Gray', opacity: 0.65, attribution: 'Elevation: USGS 3DEP', minZoom: 9, maxZoom: 21, maxNativeZoom: 18 }).addTo(map);
-const contourLayer = new ExportLayer('', { pane: 'contours', rule: 'Preset 2ft Contour Interval', minZoom: 13, maxZoom: 21, maxNativeZoom: 18 });
+const contourLayer = new ExportLayer('', { pane: 'contours', format: 'png32', rule: 'Preset 2ft Contour Interval', minZoom: 13, maxZoom: 21, maxNativeZoom: 18 });
 
 $('lidarOn').onchange = e => e.target.checked ? lidarLayer.addTo(map) : lidarLayer.remove();
 $('lidarMode').onchange = e => { lidarLayer.options.rule = e.target.value; lidarLayer.redraw(); };
@@ -711,20 +720,20 @@ const WAYBACK_CFG = 'https://s3-us-west-2.amazonaws.com/config.maptiles.arcgis.c
 const S2 = 'https://sentinel.arcgis.com/arcgis/rest/services/Sentinel2/ImageServer';
 const S2_STYLES = [['Natural Color', 'True colour'], ['NDVI Colormap', 'Crop health (NDVI)'], ['Color Infrared', 'Colour infrared'], ['NDMI Colorized', 'Moisture (NDMI)'], ['Agriculture', 'Agriculture bands']];
 const S2Layer = L.TileLayer.extend({
+  options: { tileSize: 512 },
   getTileUrl(c) {
-    const res = 2 * R / (256 * 2 ** c.z), xmin = -R + c.x * 256 * res, ymax = R - c.y * 256 * res;
-    const bbox = [xmin, ymax - 256 * res, xmin + 256 * res, ymax].map(v => v.toFixed(2)).join(',');
+    const { ts, bbox } = tileBox(this, c);
     const ids = this.options.ids ? '&mosaicRule=' + encodeURIComponent(JSON.stringify({ mosaicMethod: 'esriMosaicLockRaster', lockRasterIds: this.options.ids })) : '';
-    return `${S2}/exportImage?f=image&format=jpgpng&bbox=${bbox}&bboxSR=3857&imageSR=3857&size=256,256${ids}` +
+    return `${S2}/exportImage?f=image&format=jpgpng&bbox=${bbox}&bboxSR=3857&imageSR=3857&size=${ts},${ts}${ids}` +
       `&renderingRule=${encodeURIComponent(JSON.stringify({ rasterFunction: this.options.style }))}`;
   }
 });
 const BASES = {
-  esri:     { name: 'Esri satellite', make: o => L.tileLayer(ESRI + '/World_Imagery/MapServer/tile/{z}/{y}/{x}', { ...o, maxNativeZoom: 19, attribution: 'Imagery © Esri, Maxar, Earthstar Geographics' }) },
+  esri:     { name: 'Esri satellite', make: o => L.tileLayer(ESRI_T + '/World_Imagery/MapServer/tile/{z}/{y}/{x}', { ...o, subdomains: ESRI_SUB, maxNativeZoom: 19, attribution: 'Imagery © Esri, Maxar, Earthstar Geographics' }) },
   wayback:  { name: 'Historical imagery', make: (o, rel) => L.tileLayer(`https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/default028mm/MapServer/tile/${rel}/{z}/{y}/{x}`, { ...o, maxNativeZoom: 19, attribution: 'Esri World Imagery Wayback' }) },
   naip:     { name: 'USGS / NAIP imagery', make: o => L.tileLayer(USGS_BM + '/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}', { ...o, maxNativeZoom: 16, attribution: 'USGS The National Map' }) },
   usgstopo: { name: 'USGS topo', make: o => L.tileLayer(USGS_BM + '/USGSTopo/MapServer/tile/{z}/{y}/{x}', { ...o, maxNativeZoom: 16, attribution: 'USGS The National Map' }) },
-  esritopo: { name: 'Esri topographic', make: o => L.tileLayer(ESRI + '/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { ...o, maxNativeZoom: 19, attribution: 'Esri, HERE, Garmin, USGS' }) },
+  esritopo: { name: 'Esri topographic', make: o => L.tileLayer(ESRI_T + '/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { ...o, subdomains: ESRI_SUB, maxNativeZoom: 19, attribution: 'Esri, HERE, Garmin, USGS' }) },
   sentinel: { name: 'Recent satellite (Sentinel-2)', make: (o, rel, sty) => new S2Layer('', { ...o, style: sty || 'Natural Color', ids: rel && rel !== 'auto' ? rel.split(',').map(Number) : null, minZoom: 8, maxNativeZoom: 16, attribution: 'Sentinel-2: Copernicus / Esri' }) },
   osm:      { name: 'OpenStreetMap', make: o => L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { ...o, maxNativeZoom: 19, attribution: '© OpenStreetMap contributors' }) },
   hillshade:{ name: 'Lidar hillshade', compareOnly: true, make: o => new ExportLayer('', { ...o, rule: 'Hillshade Multidirectional', minZoom: 9, maxNativeZoom: 18 }) },
@@ -758,8 +767,14 @@ async function loadReleases() {
   return view.releases;
 }
 // Sentinel-2 scenes over the current view in the last ~14 months, mostly cloud-free, one entry per day
+const sceneCache = new Map();
 async function loadScenes() {
   const b = map.getBounds(), sw = proj(b.getSouthWest()), ne = proj(b.getNorthEast());
+  const key = [sw.x, sw.y, ne.x, ne.y].map(v => Math.round(v / 500)).join();
+  if (!sceneCache.has(key)) { const p = querySceneList(sw, ne); sceneCache.set(key, p); p.catch(() => sceneCache.delete(key)); }
+  return sceneCache.get(key);
+}
+async function querySceneList(sw, ne) {
   const q = new URLSearchParams({ f: 'json', geometry: [sw.x, sw.y, ne.x, ne.y].map(v => v.toFixed(0)).join(','), geometryType: 'esriGeometryEnvelope', inSR: '3857',
     spatialRel: 'esriSpatialRelIntersects', where: 'cloudcover < 0.25', outFields: 'objectid,acquisitiondate,cloudcover', returnGeometry: 'false',
     orderByFields: 'acquisitiondate DESC', resultRecordCount: '120' });
@@ -1644,16 +1659,48 @@ function planGrid(xmin, ymin, xmax, ymax, groundCell, maxDim) {
 const cellX = (g, c) => g.xmin + (c + 0.5) * g.cs;
 const cellY = (g, r) => g.ymax - (r + 0.5) * g.cs;
 
+// Draw Esri satellite imagery for a web-mercator box onto a canvas from the cached map tiles. Asking the
+// server to render one big custom image (MapServer/export) can take 10+ seconds; the tiles come off a CDN.
+async function drawImagery(ctx, [xmin, ymin, xmax, ymax], w, h) {
+  const want = (xmax - xmin) / w;                                     // metres per output pixel
+  let z = Math.min(18, Math.max(1, Math.ceil(Math.log2(2 * R / (256 * want)))));
+  const tileOf = (x, y, z) => [Math.floor((x + R) / (2 * R) * 2 ** z), Math.floor((R - y) / (2 * R) * 2 ** z)];
+  let a, b;
+  for (;; z--) { a = tileOf(xmin, ymax, z); b = tileOf(xmax, ymin, z); if ((b[0] - a[0] + 1) * (b[1] - a[1] + 1) <= 64 || z <= 1) break; }
+  const span = 2 * R / 2 ** z, sx = w / (xmax - xmin), sy = h / (ymax - ymin), jobs = [];
+  for (let ty = a[1]; ty <= b[1]; ty++) for (let tx = a[0]; tx <= b[0]; tx++) jobs.push(new Promise((ok, bad) => {
+    const img = new Image(); img.crossOrigin = 'anonymous';
+    const t = setTimeout(() => bad(new Error('imagery timed out')), 15000);
+    img.onload = () => { clearTimeout(t); ok([img, tx, ty]); }; img.onerror = () => { clearTimeout(t); bad(new Error('imagery failed')); };
+    img.src = `https://${ESRI_SUB[(tx + ty) % 2]}.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${ty}/${tx}`;
+  }));
+  const tiles = (await Promise.allSettled(jobs)).filter(r => r.status === 'fulfilled').map(r => r.value);
+  if (tiles.length < jobs.length / 2) throw new Error('Satellite imagery unavailable');
+  for (const [img, tx, ty] of tiles) {
+    const x0 = -R + tx * span, y0 = R - ty * span;
+    ctx.drawImage(img, (x0 - xmin) * sx, (ymax - y0) * sy, span * sx + 0.5, span * sy + 0.5);
+  }
+}
+
+// Recently fetched elevation grids, so the tour can start the download before you press "Show me".
+const elevCache = new Map();
+function elevationBuffer(url) {
+  if (!elevCache.has(url)) {
+    const p = fetch(url).then(r => { if (!r.ok) throw new Error('USGS elevation service returned HTTP ' + r.status); return r.arrayBuffer(); });
+    elevCache.set(url, p); p.catch(() => elevCache.delete(url));
+    while (elevCache.size > 4) elevCache.delete(elevCache.keys().next().value);
+  }
+  return elevCache.get(url);
+}
+const elevationUrl = g => `${SVC}/exportImage?f=image&format=lerc&pixelType=F32&bboxSR=3857&imageSR=3857` +
+  `&bbox=${[g.xmin, g.ymin, g.xmax, g.ymax].map(v => v.toFixed(3)).join(',')}&size=${g.W},${g.H}&interpolation=RSP_BilinearInterpolation`;
+
 async function fetchElevation(g) {
-  const bbox = [g.xmin, g.ymin, g.xmax, g.ymax].map(v => v.toFixed(3)).join(',');
-  const url = `${SVC}/exportImage?f=image&format=lerc&pixelType=F32&bboxSR=3857&imageSR=3857` +
-    `&bbox=${bbox}&size=${g.W},${g.H}&interpolation=RSP_BilinearInterpolation`;
+  const url = elevationUrl(g);
   let lastErr;
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      const r = await fetch(url);
-      if (!r.ok) throw new Error('USGS elevation service returned HTTP ' + r.status);
-      const d = Lerc.decode(await r.arrayBuffer());
+      const d = Lerc.decode(await elevationBuffer(url));
       if (d.width !== g.W || d.height !== g.H) throw new Error('Unexpected raster size from USGS');
       const src = d.pixels[0], mask = d.mask, z = new Float32Array(g.W * g.H);
       let valid = 0;
@@ -1886,14 +1933,21 @@ const fieldLineRenderer = L.canvas({ pane: 'fieldlines', padding: 0.3 });
 let field = null;
 
 // opts: { splits: [[latlng…]…], secDesign: [[slope, heading]…], ratio }
-async function analyzeField(pts, opts = {}) {
-  stopEditing(); clearField(); setStatus('');
-  if (opts.ratio) $('dRatio').value = opts.ratio;
-  const merc = pts.map(proj);
+function fieldGrid(merc) {
   const xs = merc.map(p => p.x), ys = merc.map(p => p.y);
   const [xmin, xmax, ymin, ymax] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
   const pad = Math.max(60, 0.2 * Math.max(xmax - xmin, ymax - ymin));   // look a little upstream of the field
-  const g = planGrid(xmin - pad, ymin - pad, xmax + pad, ymax + pad, 1, 1000);
+  return planGrid(xmin - pad, ymin - pad, xmax + pad, ymax + pad, 1, 1000);
+}
+// start downloading a field's lidar (and its NOAA storms) without analysing it yet
+function prefetchField(pts) {
+  elevationBuffer(elevationUrl(fieldGrid(pts.map(proj)))).catch(() => {});
+  atlas14(L.latLngBounds(pts).getCenter()).catch(() => {});
+}
+async function analyzeField(pts, opts = {}) {
+  stopEditing(); clearField(); setStatus('');
+  if (opts.ratio) $('dRatio').value = opts.ratio;
+  const merc = pts.map(proj), g = fieldGrid(merc);
   const outline = L.polygon(pts, { color: '#e3b341', weight: 2.5, fill: false, interactive: false }).addTo(map);
   field = { pts, merc, g, splits: (opts.splits || []).map(s => s.map(p => L.latLng(p))), sel: 0, layers: { outline } };
   const me = field;
@@ -2501,11 +2555,7 @@ async function reportImage(mode, maxPx = 1400) {
   const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
   const ctx = cv.getContext('2d');
   ctx.fillStyle = '#ddd'; ctx.fillRect(0, 0, w, h);
-  try {
-    const img = new Image(); img.crossOrigin = 'anonymous';
-    img.src = `${ESRI}/World_Imagery/MapServer/export?bbox=${b.join(',')}&bboxSR=3857&imageSR=3857&size=${w},${h}&format=jpg&f=image`;
-    await img.decode(); ctx.drawImage(img, 0, 0, w, h);
-  } catch { /* plain background */ }
+  try { await drawImagery(ctx, b, w, h); } catch { /* plain background */ }
   const P = (x, y) => [(x - b[0]) * sc, (b[3] - y) * sc];
   const { cv: ov } = overlayCanvas(mode);
   ctx.globalAlpha = 0.85; ctx.imageSmoothingEnabled = false;
@@ -2793,10 +2843,14 @@ class RainSim {
 }
 
 let flow = null;
+// the 3D view uses a coarser copy of the field grid, at most ~220 cells across
+const flowDims = g => { const f = Math.max(1, Math.ceil(Math.max(g.W, g.H) / 220)); return { f, nx: Math.floor(g.W / f), ny: Math.floor(g.H / f) }; };
+// the 3D ground picture, built once per field (the tour starts it early so 3D opens straight away)
+const flowTexture = fl => fl.texP ??= (() => { const { f, nx, ny } = flowDims(fl.g); return textureCanvas(fl, nx * f, ny * f); })();
 async function openFlow() {
   if (!field) return;
   const { g } = field;
-  const f = Math.max(1, Math.ceil(Math.max(g.W, g.H) / 220)), nx = Math.floor(g.W / f), ny = Math.floor(g.H / f);
+  const { f, nx, ny } = flowDims(g);
   const z = new Float32Array(nx * ny); let zmin = Infinity;
   for (let r = 0; r < ny; r++) for (let c = 0; c < nx; c++) {
     let s = 0, n = 0;
@@ -2808,8 +2862,10 @@ async function openFlow() {
 
   $('flow').classList.remove('hidden');
   busy('Building 3D view…');
-  const tex = await buildTexture(g, nx * f, ny * f);
+  const me = field, cv = await flowTexture(field);
   busy('');
+  if (field !== me || flow) { if (!flow) $('flow').classList.add('hidden'); return; }
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
 
   const view = $('flowview');
   const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -2877,27 +2933,24 @@ function gridGeometry(nx, ny, cell) {
 }
 
 // satellite image of the window (falls back to the elevation colours), with the field outline drawn on
-async function buildTexture(g, wCells, hCells) {
-  const x1 = g.xmin + wCells * g.cs, y0 = g.ymax - hCells * g.cs;
+async function textureCanvas(fl, wCells, hCells) {
+  const { g } = fl, x1 = g.xmin + wCells * g.cs, y0 = g.ymax - hCells * g.cs;
   const tw = Math.min(2048, Math.round(2048 * wCells / Math.max(wCells, hCells))), th = Math.min(2048, Math.round(2048 * hCells / Math.max(wCells, hCells)));
   const cv = document.createElement('canvas'); cv.width = tw; cv.height = th;
   const ctx = cv.getContext('2d');
-  try {
-    const img = new Image(); img.crossOrigin = 'anonymous';
-    img.src = `${ESRI}/World_Imagery/MapServer/export?bbox=${g.xmin},${y0},${x1},${g.ymax}&bboxSR=3857&imageSR=3857&size=${tw},${th}&format=jpg&f=image`;
-    await img.decode(); ctx.drawImage(img, 0, 0, tw, th);
-  } catch {
-    const { zs } = field;
+  try { await drawImagery(ctx, [g.xmin, y0, x1, g.ymax], tw, th); }
+  catch {
+    const { zs } = fl, im = ctx.createImageData(tw, th);
     for (let r = 0; r < th; r++) for (let c = 0; c < tw; c++) {
-      const v = zs[Math.floor(r / th * hCells) * g.W + Math.floor(c / tw * wCells)];
-      ctx.fillStyle = `rgb(${ramp((v - field.lo) / (field.hi - field.lo || 1)).map(Math.round)})`; ctx.fillRect(c, r, 1, 1);
+      const v = zs[Math.floor(r / th * hCells) * g.W + Math.floor(c / tw * wCells)], [R_, G_, B_] = ramp((v - fl.lo) / (fl.hi - fl.lo || 1)), k = (r * tw + c) * 4;
+      im.data[k] = R_; im.data[k + 1] = G_; im.data[k + 2] = B_; im.data[k + 3] = 255;
     }
+    ctx.putImageData(im, 0, 0);
   }
   ctx.strokeStyle = '#e3b341'; ctx.lineWidth = Math.max(2, tw / 400); ctx.beginPath();
-  field.merc.forEach((p, i) => { const X = (p.x - g.xmin) / (x1 - g.xmin) * tw, Y = (g.ymax - p.y) / (g.ymax - y0) * th; i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); });
+  fl.merc.forEach((p, i) => { const X = (p.x - g.xmin) / (x1 - g.xmin) * tw, Y = (g.ymax - p.y) / (g.ymax - y0) * th; i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); });
   ctx.closePath(); ctx.stroke();
-  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
-  return tex;
+  return cv;
 }
 
 function updateWater() {
@@ -2983,6 +3036,7 @@ $('rStorm').onchange = e => {
 $('flowPlay').onclick = () => { flow.running = !flow.running; $('flowPlay').textContent = flow.running ? 'Pause' : 'Resume'; };
 $('flowReset').onclick = resetFlow;
 $('flowClose').onclick = closeFlow;
+$('btn3d').onpointerenter = () => field?.sections && flowTexture(field);    // start on hover, ready by the click
 $('btn3d').onclick = () => openFlow().catch(e => { busy(''); setStatus(e.message, true); closeFlow(); });
 
 // ───────────────────────── guided tour ─────────────────────────
@@ -3021,6 +3075,8 @@ async function ensureDemoField() {
   const f = tourSample().field;
   map.fitBounds(L.latLngBounds(f), { padding: [140, 140], maxZoom: 16 });
   await analyzeField(f);
+  if (field?.sections) flowTexture(field);                       // so the 3D step opens without a wait
+  prefetchField(SAMPLES[(tour.sample + 1) % SAMPLES.length].field);   // and "Show another field" is quick
 }
 async function ensureDemoProfile() {
   if (profile?.samples) return;
@@ -3040,10 +3096,14 @@ async function showSwipe() {
   if (view.swipe && tour.swiped) return;
   if ($('baseSel').value !== 'esri') { tour.baseWas ??= $('baseSel').value; setSel('baseSel', 'esri'); }
   $('swipeOn').checked = true; $('cmpSel').value = 'sentinel'; $('cmpSty').value = 'NDVI Colormap';
-  tour.swiped = true; await setCompare();
-  // crop health means most in midsummer: show the clearest July/August pass rather than the latest one
-  const summer = [...$('cmpRel').options].filter(o => /-0[78]-/.test(o.dataset.date || '')).sort((a, b) => a.dataset.cloud - b.dataset.cloud);
-  if (summer[0] && tour.swiped) { $('cmpRel').value = summer[0].value; await setCompare(); }
+  tour.swiped = true;
+  // crop health means most in midsummer: pick the clearest July/August pass (not the latest) before any tiles load
+  try {
+    await fillReleases('cmp', 'sentinel');
+    const summer = [...$('cmpRel').options].filter(o => /-0[78]-/.test(o.dataset.date || '')).sort((a, b) => a.dataset.cloud - b.dataset.cloud);
+    if (summer[0]) $('cmpRel').value = summer[0].value;
+  } catch { /* fall back to the latest clear view */ }
+  if (tour.swiped) await setCompare();
 }
 async function hideSwipe() {
   if (!tour.swiped) return;
@@ -3199,6 +3259,7 @@ function startTour(at = 0) {
   $('tourPop').classList.remove('hidden'); $('tourSpot').classList.remove('hidden');
   $('tourDots').innerHTML = TOUR.map((_, k) => `<i data-k="${k}"></i>`).join('');
   if (tour.i < 0 && !tour.saved) tourSave();
+  prefetchField(tourSample().field);                // download the sample field's lidar while the welcome is read
   tour.i = -1; goTour(at);
   cancelAnimationFrame(tour.raf);
   const loop = () => { placeTour(); tour.raf = requestAnimationFrame(loop); };
