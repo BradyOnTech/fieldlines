@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>GradeScout · lidar drainage, profiles & cut/fill</title>
+<title>FieldLines · lidar drainage, profiles & cut/fill</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/lerc@2.0.0/LercDecode.min.js"></script>
@@ -305,7 +305,7 @@
 <div id="app">
   <aside id="side">
     <nav id="rail" aria-label="Sections">
-      <div class="mark" title="GradeScout"><svg viewBox="0 0 24 24"><path d="M3 15c4-5 7 1 11-3s5-4 7-5"/><path d="M3 20c4-4 8 0 12-2.5s5-3 6-3"/></svg></div>
+      <div class="mark" title="FieldLines"><svg viewBox="0 0 24 24"><path d="M3 15c4-5 7 1 11-3s5-4 7-5"/><path d="M3 20c4-4 8 0 12-2.5s5-3 6-3"/></svg></div>
       <button data-pane="map" class="on" title="Base map, imagery and lidar"><svg viewBox="0 0 24 24"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z M9 3v15 M15 6v15"/></svg>Map</button>
       <button data-pane="layers" title="Parcels, soils, flood zones and other data layers"><svg viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z M3 13l9 5 9-5"/></svg>Layers</button>
       <button data-pane="draw" title="Draw or import a field, or draw a profile line"><svg viewBox="0 0 24 24"><path d="M4 18L9 5l8 3 3 10z"/></svg>Draw</button>
@@ -318,7 +318,7 @@
 
     <div id="panel">
       <div class="ptop">
-        <div class="brand">GradeScout</div>
+        <div class="brand">FieldLines</div>
         <h1 id="paneTitle">Map</h1>
         <div class="searchbox"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg>
           <input id="search" type="text" placeholder="Search a place, or paste lat, lon" autocomplete="off"></div>
@@ -577,6 +577,11 @@ const LIDAR_INDEX = 'https://index.nationalmap.gov/arcgis/rest/services/3DEPElev
 const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services';
 const M2FT = 3.28084, ACRE_M2 = 4046.8564, YD3_M3 = 0.764555, R = 20037508.342789244;
 const $ = id => document.getElementById(id);
+// The app was called GradeScout: carry saved fields, pins and the tour flag over to the new keys once
+try { for (const k of ['marks.v1', 'saved.v1', 'tour.v1']) {
+  const v = localStorage.getItem('gradescout.' + k);
+  if (v !== null) { if (localStorage.getItem('fieldlines.' + k) === null) localStorage.setItem('fieldlines.' + k, v); localStorage.removeItem('gradescout.' + k); }
+} } catch { /* storage blocked */ }
 const proj = ll => L.CRS.EPSG3857.project(ll);                // lat/lng → web-mercator metres
 const unproj = (x, y) => L.CRS.EPSG3857.unproject(L.point(x, y));
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -1208,7 +1213,7 @@ function toKML() {
   }
   const styles = Object.entries(STY).map(([k, col]) => `<Style id="${k}"><LineStyle><color>${col}</color><width>${k === 'boundary' ? 3 : k === 'drainage' ? 2.5 : 1.2}</width></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>`).join('');
   const NAMES = { boundary: 'Field boundary', split: 'Split lines', section: 'Sections', drainage: 'Drainage paths', outlet: 'Outlets', contour: 'Contours (existing)', design_contour: 'Contours (design)', profile: 'Profile line' };
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>GradeScout field</name>${styles}` +
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>FieldLines field</name>${styles}` +
     Object.entries(folders).map(([k, pm]) => `<Folder><name>${NAMES[k] || k}</name>${pm.join('')}</Folder>`).join('') + '</Document></kml>';
 }
 // Minimal ESRI shapefile writer: one polygon record (the field boundary) + .dbf attributes + WGS84 .prj
@@ -1273,7 +1278,7 @@ const PIN_TYPES = {
   gate:    { name: 'Gate / access',   color: '#fc8181', glyph: '⊓' },
 };
 const LINE_COLORS = { track: '#2f80ff', line: '#5ee7ff', area: '#5ee7ff' };
-const MARK_KEY = 'gradescout.marks.v1';
+const MARK_KEY = 'fieldlines.marks.v1';
 const marks = (() => { try { const m = JSON.parse(localStorage.getItem(MARK_KEY)); if (m?.pins && m?.lines) return m; } catch { /* fresh */ } return { pins: [], lines: [] }; })();
 const markLayers = new Map();                 // id → leaflet layer
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -1498,12 +1503,12 @@ function marksKML() {
     `<ExtendedData><Data name="type"><value>${p.type}</value></Data></ExtendedData><Point><coordinates>${p.lng},${p.lat},0</coordinates></Point></Placemark>`).join('');
   const lines = marks.lines.map(l => `<Placemark><name>${esc(l.name)}</name><styleUrl>#line_${l.kind}</styleUrl><ExtendedData><Data name="kind"><value>${l.kind}</value></Data></ExtendedData>` +
     (l.kind === 'area' ? `<Polygon><outerBoundaryIs><LinearRing><coordinates>${coords([...l.pts, l.pts[0]])}</coordinates></LinearRing></outerBoundaryIs></Polygon>` : `<LineString><tessellate>1</tessellate><coordinates>${coords(l.pts)}</coordinates></LineString>`) + '</Placemark>').join('');
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>GradeScout pins &amp; tracks</name>${styles}<Folder><name>Pins</name>${pins}</Folder><Folder><name>Lines &amp; tracks</name>${lines}</Folder></Document></kml>`;
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>FieldLines pins &amp; tracks</name>${styles}<Folder><name>Pins</name>${pins}</Folder><Folder><name>Lines &amp; tracks</name>${lines}</Folder></Document></kml>`;
 }
 function marksGPX() {
   const wpt = marks.pins.map(p => `<wpt lat="${p.lat}" lon="${p.lng}">${p.z != null ? `<ele>${p.z.toFixed(2)}</ele>` : ''}<name>${esc(p.name)}</name><desc>${esc(p.note || '')}</desc><type>${esc(PIN_TYPES[p.type]?.name || 'Note')}</type></wpt>`).join('\n');
   const trk = marks.lines.map(l => `<trk><name>${esc(l.name)}</name><type>${l.kind}</type><trkseg>${(l.kind === 'area' ? [...l.pts, l.pts[0]] : l.pts).map(p => `<trkpt lat="${p[0]}" lon="${p[1]}"/>`).join('')}</trkseg></trk>`).join('\n');
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="GradeScout" xmlns="http://www.topografix.com/GPX/1/1">\n${wpt}\n${trk}\n</gpx>`;
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="FieldLines" xmlns="http://www.topografix.com/GPX/1/1">\n${wpt}\n${trk}\n</gpx>`;
 }
 $('markExport').onchange = e => {
   const k = e.target.value; e.target.value = '';
@@ -1522,8 +1527,9 @@ function guessPinType(s) {
 const FIELD_KINDS = new Set(['boundary', 'split', 'section', 'drainage', 'outlet', 'contour', 'design_contour', 'profile']);
 function markupsFromKML(xml) {
   const pins = [], lines = [];
-  // GradeScout's own field export: its drainage lines, outlets and contours are results, not markups
-  if (xml.getElementsByTagNameNS('*', 'Document')[0]?.getElementsByTagNameNS('*', 'name')[0]?.textContent === 'GradeScout field') return { pins, lines };
+  // The app's own field export (also files saved under the old GradeScout name): its drainage lines, outlets and contours are results, not markups
+  const docName = xml.getElementsByTagNameNS('*', 'Document')[0]?.getElementsByTagNameNS('*', 'name')[0]?.textContent;
+  if (/^(FieldLines|GradeScout) field$/.test(docName)) return { pins, lines };
   for (const pm of xml.getElementsByTagNameNS('*', 'Placemark')) {
     const name = pm.getElementsByTagNameNS('*', 'name')[0]?.textContent.trim() || '';
     const desc = (pm.getElementsByTagNameNS('*', 'description')[0]?.textContent || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
@@ -2449,7 +2455,7 @@ $('btnShare').onclick = async () => {
   try { await navigator.clipboard.writeText(location.href); setStatus('Link copied. Anyone opening it gets this field, splits and design.'); }
   catch { setStatus('Copy this page address to share the field: it holds the outline, splits and design.'); }
 };
-const SAVE_KEY = 'gradescout.saved.v1';
+const SAVE_KEY = 'fieldlines.saved.v1';
 const loadSaved = () => { try { return JSON.parse(localStorage.getItem(SAVE_KEY)) || []; } catch { return []; } };
 function renderSaved() {
   const list = loadSaved();
@@ -2550,7 +2556,7 @@ async function pdfReport() {
     const lines = doc.splitTextToSize(legend.replace(/≥/g, '>='), PW);
     text(lines.join('\n'), M, y, 8.5, 'normal', [90, 90, 90]); y += 11 * lines.length + 12;
   };
-  text('GradeScout field report', M, y + 6, 18, 'bold'); y += 26;
+  text('FieldLines field report', M, y + 6, 18, 'bold'); y += 26;
   text(`${new Date().toLocaleString()}  ·  ${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}`, M, y, 9, 'normal', [90, 90, 90]); y += 13;
   if (field.lidar) { text(field.lidar, M, y, 9, 'normal', [90, 90, 90]); y += 13; }
   y += 8;
@@ -2981,7 +2987,7 @@ $('btn3d').onclick = () => openFlow().catch(e => { busy(''); setStatus(e.message
 
 // ───────────────────────── guided tour ─────────────────────────
 // Spotlights one control at a time, explains it, and can run each feature on a real sample field.
-const TOUR_KEY = 'gradescout.tour.v1';
+const TOUR_KEY = 'fieldlines.tour.v1';
 // Sample fields the tour can run on. "Show another field" steps through them.
 const lls = a => a.map(p => L.latLng(p[0], p[1]));
 const SAMPLES = [
@@ -3076,8 +3082,8 @@ async function tourRestore() {
 }
 
 const TOUR = [
-  { ch: 'Welcome', wide: true, title: 'Welcome to GradeScout',
-    body: `<p>GradeScout reads free USGS <b>lidar</b> (laser-scanned bare ground) to show how water moves across your ground, where it ponds or washes, and where beds, orchards, waterways, ponds or a high tunnel will sit best.</p>
+  { ch: 'Welcome', wide: true, title: 'Welcome to FieldLines',
+    body: `<p>FieldLines reads free USGS <b>lidar</b> (laser-scanned bare ground) to show how water moves across your ground, where it ponds or washes, and where beds, orchards, waterways, ponds or a high tunnel will sit best.</p>
       <p>This tour points at each part of the screen. Most steps have a <b>Show me</b> button that runs the feature on a sample field: about 30 acres of open, rolling cropland near Viroqua, in Wisconsin's Driftless Area. You see real results without drawing anything, and each step clears the last one's layers so the map stays readable.</p>
       <p>On the field steps, <b>Show another field</b> switches to a second sample: small family vegetable plots on nearly flat ground in Minnesota, where the runoff is much harder to spot.</p>
       <p>The icons down the left open each part of the app: <b>Map</b>, <b>Layers</b>, <b>Draw</b>, <b>Field</b>, <b>Pins</b> and <b>Profile</b>. Click the open one again to tuck the panel away.</p>

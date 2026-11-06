@@ -1,8 +1,8 @@
-# GradeScout
+# FieldLines
 
 A single-file web app for reading free USGS 3DEP lidar on farm ground: drainage paths, ponding, slope classes, soils, cut/fill grade design, elevation profiles, 3D rain with NOAA Atlas 14 design storms, landowner parcels, crop-health imagery, and pins/tracks/GPS for scouting.
 
-Live at **https://bradyontech.github.io/gradescout/**
+Live at **https://bradyontech.github.io/fieldlines/**
 
 ## Run it
 
@@ -16,7 +16,7 @@ The tour starts on the first visit, and the **Tour** button at the bottom of the
 
 ## Where the data comes from
 
-Every layer is fetched straight from the publisher's public service when you look at it. GradeScout has no server of its own and keeps no copy of the data. Each publisher sets its own availability and terms of use.
+Every layer is fetched straight from the publisher's public service when you look at it. FieldLines has no server of its own and keeps no copy of the data. Each publisher sets its own availability and terms of use.
 
 ### Elevation and lidar
 
