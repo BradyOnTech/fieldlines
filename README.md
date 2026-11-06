@@ -10,4 +10,4 @@ GPS and share links need the file hosted over `https://`, for example on Netlify
 
 ## Guided tour
 
-The tour starts on the first visit, and the **? Tour** button replays it. Its steps and the sample fields (the `SAMPLES` list, with a Wisconsin ridge-top field and Minnesota vegetable plots) are near the bottom of `index.html`, in the "guided tour" section.
+The tour starts on the first visit, and the **Tour** button at the bottom of the icon bar replays it. Its steps and the sample fields (the `SAMPLES` list, with a Wisconsin ridge-top field and Minnesota vegetable plots) are near the bottom of `index.html`, in the "guided tour" section.

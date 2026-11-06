@@ -18,351 +18,511 @@
 </script>
 <style>
   :root {
-    --bg: #14191a; --panel: #1b2223; --card: #222b2c; --line: #34403f; --text: #e8ece6;
-    --muted: #93a19c; --accent: #e3b341; --accent-ink: #1b1600; --blue: #3aa6ff; --danger: #e5675a;
+    --panel: #F2F2F7; --rail: #E9E9EE; --card: #FFFFFF; --text: #1D1D1F; --text2: #3C3C43; --muted: #6E6E73; --faint: #AEAEB2;
+    --line: rgba(60, 60, 67, .18); --fill: rgba(118, 118, 128, .12); --fill2: rgba(118, 118, 128, .2);
+    --accent: #007AFF; --accent-hover: #0068DB; --accent-ink: #FFFFFF; --accent-tint: rgba(0, 122, 255, .12);
+    --blue: #007AFF; --danger: #FF3B30; --green: #34C759;
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --glass: rgba(246, 246, 248, .86); --glass-edge: 0 0 0 .5px rgba(0, 0, 0, .14), 0 4px 14px rgba(0, 0, 0, .16);
+    --sideW: 414px; --sideH: 0px;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
-    font: 13px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
-  #app { display: flex; height: 100%; }
-  #side { width: 340px; flex: none; overflow-y: auto; background: var(--panel); border-right: 1px solid var(--line);
-    padding: 14px 14px 40px; display: flex; flex-direction: column; gap: 12px; }
-  #mapwrap { position: relative; flex: 1; min-width: 0; }
-  #map { position: absolute; inset: 0; background: #0b0f10; }
-  #map.drawing { cursor: crosshair; }
-  h1 { font-size: 17px; margin: 0; letter-spacing: .2px; }
-  h1 b { color: var(--accent); }
-  .sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
-  .card h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .9px; color: var(--muted); margin: 0 0 10px; font-weight: 600; }
-  .row { display: flex; align-items: center; gap: 8px; margin: 7px 0; }
-  .row > label:first-child { flex: 1; color: var(--muted); }
+  html, body { margin: 0; height: 100%; background: #E5E5EA; color: var(--text);
+    font: 13px/1.4 var(--font); -webkit-font-smoothing: antialiased; }
   .hidden { display: none !important; }
-  input[type=text], input[type=number], select {
-    background: #121718; color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font: inherit; }
-  input[type=number] { width: 78px; font-family: var(--mono); text-align: right; }
-  input[type=range] { accent-color: var(--accent); width: 130px; }
-  input[type=checkbox] { accent-color: var(--accent); }
-  #search { width: 100%; }
-  button { font: inherit; cursor: pointer; border-radius: 7px; border: 1px solid var(--line); background: #2b3536; color: var(--text);
-    padding: 7px 10px; transition: background .12s, transform .06s; }
-  button:hover { background: #34403f; }
-  button:active { transform: translateY(1px); }
-  button.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; font-weight: 600; }
-  button.primary:hover { background: #f0c45a; }
-  button.ghost { background: transparent; }
-  .btns { display: flex; gap: 6px; flex-wrap: wrap; }
-  .btns.grow > button { flex: 1; white-space: nowrap; padding-left: 6px; padding-right: 6px; }
-  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; }
-  .stat { background: #1a2122; border-radius: 7px; padding: 6px 8px; }
-  .stat .k { color: var(--muted); font-size: 11px; }
-  .stat .v { font-family: var(--mono); font-size: 13.5px; font-variant-numeric: tabular-nums; }
-  .stat .v.cut { color: #ff8a7a; } .stat .v.fill { color: #7cb8ff; }
-  .legend { height: 10px; border-radius: 5px; margin-top: 4px; }
-  .legend-lbl { display: flex; justify-content: space-between; color: var(--muted); font: 11px var(--mono); margin-top: 3px; }
-  .hint { color: var(--muted); font-size: 12px; }
-  #status { color: var(--muted); font-size: 12px; min-height: 16px; }
-  #status.err { color: var(--danger); }
-  #profileCanvas { width: 100%; height: 170px; display: block; background: #151b1c; border-radius: 7px; cursor: crosshair; }
-  #profileHover { font: 11.5px var(--mono); color: var(--muted); min-height: 16px; margin-top: 4px; }
 
-  /* map overlays */
-  .floating { position: absolute; z-index: 800; background: rgba(20,25,26,.92); border: 1px solid var(--line);
-    border-radius: 9px; backdrop-filter: blur(6px); }
-  #drawbar { top: 12px; left: 50%; transform: translateX(-50%); padding: 8px 10px; display: flex; gap: 8px; align-items: center; }
-  #drawbar span { margin-right: 6px; }
-  #map.editing .leaflet-interactive { cursor: move; }
-  #toast { top: 12px; left: 12px; padding: 8px 12px; display: flex; gap: 8px; align-items: center; }
-  .spin { width: 12px; height: 12px; border: 2px solid #ffffff33; border-top-color: var(--accent); border-radius: 50%; animation: s .8s linear infinite; }
-  @keyframes s { to { transform: rotate(360deg); } }
-  #readout { bottom: 22px; left: 12px; padding: 5px 9px; font: 12px var(--mono); pointer-events: none; }
-  #lidarInfo { bottom: 22px; right: 12px; padding: 5px 9px; font-size: 11.5px; color: var(--muted); max-width: 46%; text-align: right; }
-  #lidarInfo b { color: var(--text); font-weight: 600; }
-  .aclabel { background: rgba(8,28,48,.88); color: #cfe9ff; border: 1px solid #3aa6ff; border-radius: 5px;
-    font: 600 11px var(--mono); padding: 1px 5px; white-space: nowrap; transform: translate(-50%, -140%); width: max-content; }
-  .leaflet-container { font: inherit; }
-  .chips { display: flex; flex-direction: column; gap: 4px; margin: 6px 0 8px; }
-  .chip { display: flex; align-items: center; gap: 8px; text-align: left; padding: 6px 8px; background: #1a2122; font: 12px var(--mono); }
-  .chip i { width: 10px; height: 10px; border-radius: 3px; flex: none; }
-  .chip.on { border-color: var(--accent); background: #2a2a1c; }
-  .seclabel { font: 700 12px var(--mono); color: #111; padding: 1px 6px; border-radius: 5px; transform: translate(-50%, -50%); width: max-content; box-shadow: 0 1px 4px #0008; }
-  .vhandle { background: #fff; border: 2px solid var(--accent); border-radius: 3px; box-shadow: 0 1px 4px #0009; cursor: move; }
-  .saved { display: flex; align-items: center; gap: 6px; padding: 6px 0; border-top: 1px solid var(--line); }
-  .saved:first-of-type { border-top: 0; }
-  .saved .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .saved .nm small { display: block; color: var(--muted); font-size: 11px; }
-  .saved button { padding: 4px 8px; font-size: 12px; }
-  .row select + select { margin-left: -2px; }
-  .row select { max-width: 190px; }
-  .cap { font: 11px var(--mono); color: var(--muted); }
+  /* layout: full-bleed map with a floating side panel (icon rail + one pane) */
+  #app { position: relative; height: 100%; overflow: hidden; }
+  #app.collapsed { --sideW: 84px; }
+  #mapwrap { position: absolute; inset: 0; }
+  #map { position: absolute; inset: 0; background: #DADADF; }
+  #map.drawing { cursor: crosshair; }
+  #side { position: absolute; z-index: 1000; left: 10px; top: 10px; bottom: 10px; display: flex; border-radius: 12px; overflow: hidden;
+    background: var(--panel); box-shadow: 0 0 0 .5px rgba(0, 0, 0, .16), 0 10px 30px rgba(0, 0, 0, .22); }
+  #rail { width: 64px; flex: none; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 12px 0 10px;
+    background: var(--rail); border-right: .5px solid var(--line); }
+  #rail .mark { width: 34px; height: 34px; flex: none; border-radius: 8px; margin-bottom: 12px; display: grid; place-items: center;
+    background: linear-gradient(180deg, #3D93FF, #0A6BFF); box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .15); }
+  #rail .mark svg { width: 20px; height: 20px; fill: none; stroke: #fff; stroke-width: 2.2; stroke-linecap: round; }
+  #rail button { width: 54px; height: 52px; flex: none; padding: 0; border: 0; border-radius: 9px; background: none; color: var(--muted);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 10.5px; font-weight: 500; }
+  #rail button:hover { background: var(--fill); }
+  #rail button.on { background: var(--accent-tint); color: var(--accent); font-weight: 600; }
+  #rail button svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  #rail .sp { flex: 1; }
+  #panel { width: 340px; display: flex; flex-direction: column; min-height: 0; }
+  #app.collapsed #panel { display: none; }
+  .ptop { padding: 14px 14px 10px; flex: none; }
+  .brand { font-size: 11.5px; font-weight: 600; color: var(--muted); }
+  #paneTitle { margin: 1px 0 10px; font-size: 22px; font-weight: 700; letter-spacing: -.02em; line-height: 1.15; }
+  .searchbox { position: relative; }
+  .searchbox svg { position: absolute; left: 9px; top: 50%; width: 14px; height: 14px; transform: translateY(-50%); fill: none; stroke: var(--muted); stroke-width: 2.4; pointer-events: none; }
+  #search { width: 100%; height: 32px; padding: 0 10px 0 29px; border: 0; border-radius: 9px; background: var(--fill); }
+  #search::placeholder { color: var(--muted); }
+  #panes { flex: 1; min-height: 0; overflow-y: auto; padding: 0 14px 16px; overscroll-behavior: contain; }
+  .pane { display: none; }
+  .pane.on { display: block; }
+  #status { flex: none; padding: 8px 16px 10px; border-top: .5px solid var(--line); color: var(--muted); font-size: 12px; }
+  #status:empty { display: none; }
+  #status.err { color: var(--danger); }
+
+  /* grouped lists */
+  .sh { margin: 18px 4px 6px; font-size: 12.5px; font-weight: 600; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; }
+  .pane > .sh:first-child, .pane > :first-child > .sh:first-child { margin-top: 4px; }
+  .sh small { font-size: 12px; font-weight: 500; color: var(--faint); }
+  .card { background: var(--card); border-radius: 10px; padding: 0 12px; box-shadow: 0 0 0 .5px rgba(0, 0, 0, .04); }
+  .card + .card { margin-top: 10px; }
+  .row { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 5px 0; border-top: .5px solid var(--line); }
+  .card > .row:first-child, .card > :first-child > .row:first-child, .card > .hidden:first-child + .row { border-top: 0; }
+  .row > label:first-child { flex: 1; min-width: 0; }
+  .row.stack { display: block; padding: 10px 0 8px; }
+  .row.stack > label { display: block; margin-bottom: 7px; }
+  .hint { color: var(--muted); font-size: 12px; line-height: 1.45; }
+  .card > .hint, .card > p.hint { margin: 0; padding: 9px 0 10px; border-top: .5px solid var(--line); }
+  .card > .hint:first-child { border-top: 0; }
+  .foot { margin: 10px 4px 0; color: var(--muted); font-size: 11.5px; line-height: 1.45; }
+  .foot b { color: var(--text2); font-weight: 600; }
+  .cap { color: var(--muted); font-size: 11.5px; padding: 0 0 8px; margin-top: -2px; }
   .cap:empty { display: none; }
+  .empty { padding: 26px 12px 22px; text-align: center; color: var(--muted); }
+  .empty b { display: block; color: var(--text); font-size: 15px; margin-bottom: 4px; }
+  .empty p { margin: 0 auto 14px; max-width: 30ch; }
+  .empty .btns { justify-content: center; }
+  .summary { margin: 2px 4px 12px; font-size: 13px; color: var(--text2); line-height: 1.45; }
+  .summary:empty { display: none; }
+  #fieldCard:not(.hidden) + .empty, #profileCard:not(.hidden) + .empty { display: none; }
+
+  /* controls */
+  input, select, textarea, button { font: inherit; color: inherit; }
+  select { -webkit-appearance: none; appearance: none; height: 28px; max-width: 190px; padding: 0 26px 0 9px; border: 0; border-radius: 7px; cursor: pointer;
+    background: var(--fill) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10' fill='none' stroke='%236E6E73' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 4l2.5 2.5L7.5 4'/%3E%3C/svg%3E") no-repeat right 8px center / 10px;
+    color: var(--text); font-size: 12.5px; text-overflow: ellipsis; }
+  select:hover { background-color: var(--fill2); }
+  select.wide { width: 100%; max-width: none; }
+  input[type=text], input[type=number] { height: 28px; padding: 0 8px; border: 0; border-radius: 7px; background: var(--fill); color: var(--text); }
+  input[type=number] { width: 78px; text-align: right; font-variant-numeric: tabular-nums; }
+  input[type=checkbox] { -webkit-appearance: none; appearance: none; position: relative; flex: none; width: 38px; height: 22px; margin: 0; border-radius: 11px;
+    background: rgba(120, 120, 128, .24); cursor: pointer; transition: background .2s; }
+  input[type=checkbox]::after { content: ''; position: absolute; left: 2px; top: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, .2), 0 0 0 .5px rgba(0, 0, 0, .04); transition: transform .2s; }
+  input[type=checkbox]:checked { background: var(--accent); }
+  input[type=checkbox]:checked::after { transform: translateX(16px); }
+  input[type=range] { -webkit-appearance: none; appearance: none; width: 130px; height: 22px; margin: 0; background: transparent; cursor: pointer; --p: 50%; }
+  input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(var(--accent), var(--accent)) 0 0 / var(--p) 100% no-repeat, rgba(120, 120, 128, .22); }
+  input[type=range]::-moz-range-track { height: 4px; border-radius: 2px; background: rgba(120, 120, 128, .22); }
+  input[type=range]::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--accent); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; margin-top: -8px; border-radius: 50%; background: #fff;
+    box-shadow: 0 .5px 4px rgba(0, 0, 0, .28), 0 0 0 .5px rgba(0, 0, 0, .06); }
+  input[type=range]::-moz-range-thumb { width: 20px; height: 20px; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 .5px 4px rgba(0, 0, 0, .28); }
+  :focus-visible { outline: 3px solid rgba(0, 122, 255, .45); outline-offset: 1px; }
+  input:focus, select:focus { outline: none; }
+  input[type=text]:focus-visible, input[type=number]:focus-visible, select:focus-visible { box-shadow: 0 0 0 3px rgba(0, 122, 255, .4); }
+
+  button { cursor: pointer; border: 0; border-radius: 8px; background: var(--fill); color: var(--accent); padding: 7px 12px; font-weight: 500; transition: background .12s, opacity .12s; }
+  button:hover { background: var(--fill2); }
+  button:active { opacity: .7; }
+  button:disabled { opacity: .4; cursor: default; }
+  button.primary { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  button.primary:hover { background: var(--accent-hover); }
+  button.ghost { background: transparent; }
+  button.ghost:hover { background: var(--fill); }
+  button.rec { background: var(--danger); color: #fff; }
+  .btns { display: flex; gap: 6px; flex-wrap: wrap; padding: 10px 0; }
+  .card > .btns + .btns { padding-top: 0; }
+  .btns.grow > button { flex: 1; white-space: nowrap; padding-left: 6px; padding-right: 6px; }
+  .seg { display: grid; grid-auto-columns: 1fr; grid-auto-flow: column; padding: 2px; border-radius: 8px; background: rgba(118, 118, 128, .12); }
+  .seg button { height: 26px; padding: 0 6px; border-radius: 6px; background: none; color: var(--text); font-size: 12.5px; font-weight: 500; white-space: nowrap; }
+  .seg button:hover { background: rgba(255, 255, 255, .5); }
+  .seg button.on { background: #fff; font-weight: 600; box-shadow: 0 0 0 .5px rgba(0, 0, 0, .04), 0 3px 8px rgba(0, 0, 0, .12), 0 3px 1px rgba(0, 0, 0, .04); }
+  .row .seg { flex: none; }
+  select.seg-src { display: none; }
+
+  /* field results */
+  .stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stats.kpi { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .stat { padding: 8px 0 9px; min-width: 0; }
+  .card.stats { padding: 0; }
+  .card.stats .stat { padding: 8px 12px 9px; }
+  .stats .stat:nth-child(n+3) { border-top: .5px solid var(--line); }
+  .stats.kpi .stat:nth-child(3) { border-top: 0; }
+  .stat .k { color: var(--muted); font-size: 11.5px; }
+  .stat .v { font-size: 15px; font-weight: 600; letter-spacing: -.01em; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .stats.kpi .stat .v { font-size: 16px; }
+  .stats:not(.kpi) .stat .v { font-size: 14px; }
+  .stat .v.cut { color: #D9480F; } .stat .v.fill { color: #0A6BD6; }
+  .legend { height: 6px; border-radius: 3px; margin-top: 10px; }
+  .legend-lbl { display: flex; justify-content: space-between; color: var(--muted); font-size: 11px; margin-top: 3px; font-variant-numeric: tabular-nums; }
+  .soil { padding: 8px 0 9px; }
+  .soil + .soil { border-top: .5px solid var(--line); }
+  .soil .nm { display: flex; gap: 8px; align-items: baseline; }
+  .soil .nm span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .soil .nm b { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .soil code { font: 600 10.5px var(--font); color: var(--muted); background: var(--fill); border-radius: 4px; padding: 1px 5px; margin-right: 6px; }
+  .soil small { display: block; margin-top: 1px; color: var(--muted); font-size: 12px; }
+  .soil .bar { height: 3px; border-radius: 2px; margin-top: 6px; background: rgba(0, 122, 255, .35); }
+  #soilList .hint { display: block; padding: 10px 0; }
+  .chips { display: flex; flex-direction: column; padding: 6px 0 2px; }
+  .chip { display: flex; align-items: center; gap: 9px; padding: 7px 6px; text-align: left; background: none; color: var(--text); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  .chip:hover { background: var(--fill); }
+  .chip.on { background: var(--accent-tint); }
+  .chip i { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+  .saved { display: flex; align-items: center; gap: 6px; padding: 8px 0; border-top: .5px solid var(--line); }
+  .saved:first-child { border-top: 0; }
+  .saved .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .saved .nm small { display: block; color: var(--muted); font-size: 11.5px; }
+  .saved button { padding: 4px 9px; font-size: 12px; }
+  .row select + select { margin-left: -2px; }
+  #openLinks { display: inline-flex; flex-wrap: wrap; gap: 2px 12px; }
   #openLinks a { color: var(--accent); text-decoration: none; white-space: nowrap; }
   #openLinks a:hover { text-decoration: underline; }
-  .cdlleg { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 11px; color: var(--muted); margin: 2px 0 6px; }
+  .cdlleg { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 11px; color: var(--muted); padding: 0 0 8px; }
   .cdlleg i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
-  #swipe { position: absolute; top: 0; bottom: 0; width: 4px; margin-left: -2px; background: #fff; z-index: 700; cursor: ew-resize; touch-action: none; box-shadow: 0 0 8px #000a; }
-  #swipe .knob { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 30px; height: 30px; border-radius: 50%; background: #fff; color: #111; display: grid; place-items: center; font-size: 15px; box-shadow: 0 1px 6px #0009; }
-  #swipe span { position: absolute; top: 58px; white-space: nowrap; background: rgba(20,25,26,.88); color: var(--text); font-size: 11.5px; padding: 3px 8px; border-radius: 6px; pointer-events: none; }
-  #swipeL { right: 12px; } #swipeR { left: 12px; }
-  #mapwrap.dropping::after { content: 'Drop KML, KMZ, GPX, GeoJSON or zipped shapefile'; position: absolute; inset: 12px; z-index: 900; border: 2px dashed var(--accent); border-radius: 12px;
-    display: grid; place-items: center; background: rgba(20,25,26,.6); color: var(--text); font-size: 16px; pointer-events: none; }
-  .idpop .leaflet-popup-content { margin: 10px 12px; font-size: 12.5px; line-height: 1.45; }
-  .idinfo span { color: #555; font-size: 11.5px; } .idinfo hr { border: 0; border-top: 1px solid #ddd; margin: 6px 0; }
-  .idinfo .ll { color: #777; font: 11px var(--mono); margin-top: 6px; } .idinfo .err { color: #b33; }
-  .soil { position: relative; padding: 4px 6px 4px 44px; margin: 3px 0; background: #1a2122; border-radius: 6px; overflow: hidden; }
-  .soil .bar { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(227,179,65,.16); }
-  .soil .pct { position: absolute; left: 6px; top: 5px; font: 600 12px var(--mono); color: var(--accent); }
-  .soil .nm { position: relative; display: block; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .soil small { position: relative; color: var(--muted); font-size: 11px; }
+  #profileCanvas { width: 100%; height: 170px; display: block; margin: 10px 0 0; cursor: crosshair; }
+  #profileHover { font-size: 11.5px; color: var(--muted); min-height: 16px; margin: 4px 0 6px; font-variant-numeric: tabular-nums; }
 
+  /* pins & tracks list */
+  #markList:empty { display: none; }
+  .mk { display: flex; align-items: center; gap: 9px; padding: 7px 0; border-top: .5px solid var(--line); }
+  .mk:first-child, .mkhead + .mk { border-top: 0; }
+  .mk i { width: 20px; height: 20px; border-radius: 50%; flex: none; display: grid; place-items: center; font: 700 11px var(--font); font-style: normal; color: #111; }
+  .mk .nm { flex: 1; min-width: 0; cursor: pointer; }
+  .mk .nm b { display: block; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mk .nm small { color: var(--muted); font-size: 11.5px; }
+  .mk button { padding: 3px 8px; font-size: 12px; }
+  .mkhead { font-size: 12px; font-weight: 600; color: var(--muted); padding: 10px 0 4px; border-top: .5px solid var(--line); }
+  .mkhead:first-child { border-top: 0; }
+
+  /* map overlays */
+  .floating { position: absolute; z-index: 800; background: var(--glass); color: var(--text); border-radius: 10px; box-shadow: var(--glass-edge);
+    -webkit-backdrop-filter: blur(20px) saturate(1.8); backdrop-filter: blur(20px) saturate(1.8); }
+  #drawbar { top: 12px; left: calc(50% + var(--sideW) / 2); transform: translateX(-50%); padding: 6px 6px 6px 12px; display: flex; gap: 6px; align-items: center; white-space: nowrap; }
+  #drawbar span { margin-right: 4px; }
+  #map.editing .leaflet-interactive { cursor: move; }
+  #toast { top: 12px; left: calc(var(--sideW) + 12px); padding: 8px 12px; display: flex; gap: 8px; align-items: center; }
+  .spin { width: 13px; height: 13px; border: 2px solid rgba(0, 0, 0, .12); border-top-color: var(--accent); border-radius: 50%; animation: s .8s linear infinite; }
+  @keyframes s { to { transform: rotate(360deg); } }
+  #readout { bottom: calc(var(--sideH) + 24px); left: calc(var(--sideW) + 12px); padding: 5px 10px; font-size: 12px; font-variant-numeric: tabular-nums; pointer-events: none; }
+  #lidarInfo { bottom: calc(var(--sideH) + 24px); right: 12px; padding: 5px 10px; font-size: 11.5px; color: var(--muted); max-width: 46%; text-align: right; }
+  #lidarInfo b { color: var(--text); font-weight: 600; }
+  .leaflet-container { font: 12px/1.4 var(--font); }
+  .leaflet-container a { color: var(--accent); }
+  .leaflet-bottom { bottom: var(--sideH); }
+  .leaflet-touch .leaflet-bar, .leaflet-bar { border: 0; border-radius: 9px; overflow: hidden; background: var(--glass); box-shadow: var(--glass-edge);
+    -webkit-backdrop-filter: blur(20px) saturate(1.8); backdrop-filter: blur(20px) saturate(1.8); }
+  .leaflet-touch .leaflet-bar a, .leaflet-bar a { width: 36px; height: 36px; line-height: 36px; background: transparent; color: var(--text2); border-bottom: .5px solid rgba(60, 60, 67, .25); font: 400 19px/36px var(--font); }
+  .leaflet-bar a:last-child { border-bottom: 0; }
+  .leaflet-bar a:hover { background: rgba(0, 0, 0, .05); }
+  .leaflet-control-scale-line { background: var(--glass); border: 0; border-radius: 6px; box-shadow: var(--glass-edge); color: var(--text2); padding: 2px 8px; font-size: 11px; }
+  .leaflet-control-attribution { background: rgba(246, 246, 248, .75) !important; border-radius: 6px 0 0 0; color: var(--muted); }
+  .leaflet-popup-content-wrapper { border-radius: 12px; box-shadow: 0 0 0 .5px rgba(0, 0, 0, .1), 0 8px 28px rgba(0, 0, 0, .25); }
+  .leaflet-popup-tip { box-shadow: none; }
+  .aclabel { background: rgba(8, 28, 48, .88); color: #cfe9ff; border: 1px solid #3aa6ff; border-radius: 5px;
+    font: 600 11px var(--mono); padding: 1px 5px; white-space: nowrap; transform: translate(-50%, -140%); width: max-content; }
+  .seclabel { font: 700 12px var(--font); color: #111; padding: 1px 6px; border-radius: 5px; transform: translate(-50%, -50%); width: max-content; box-shadow: 0 1px 4px #0008; }
+  .vhandle { background: #fff; border: 2px solid var(--accent); border-radius: 3px; box-shadow: 0 1px 4px #0009; cursor: move; }
+  #swipe { position: absolute; top: 0; bottom: 0; width: 4px; margin-left: -2px; background: #fff; z-index: 700; cursor: ew-resize; touch-action: none; box-shadow: 0 0 8px #000a; }
+  #swipe .knob { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 32px; height: 32px; border-radius: 50%; background: #fff; color: var(--text); display: grid; place-items: center; font-size: 15px; box-shadow: 0 1px 6px #0009; }
+  #swipe span { position: absolute; top: 58px; white-space: nowrap; background: var(--glass); color: var(--text); font-size: 11.5px; padding: 3px 9px; border-radius: 7px; pointer-events: none; box-shadow: var(--glass-edge); }
+  #swipeL { right: 12px; } #swipeR { left: 12px; }
+  #mapwrap.dropping::after { content: 'Drop KML, KMZ, GPX, GeoJSON or zipped shapefile'; position: absolute; inset: 12px 12px 12px calc(var(--sideW) + 12px); z-index: 900; border: 2px dashed var(--accent); border-radius: 12px;
+    display: grid; place-items: center; background: rgba(242, 242, 247, .7); color: var(--text); font-size: 16px; font-weight: 600; pointer-events: none; }
+  .idpop .leaflet-popup-content { margin: 11px 13px; font-size: 12.5px; line-height: 1.45; }
+  .idinfo span { color: var(--muted); font-size: 11.5px; } .idinfo hr { border: 0; border-top: .5px solid rgba(60, 60, 67, .25); margin: 7px 0; }
+  .idinfo .ll { color: var(--muted); font-size: 11px; margin-top: 6px; font-variant-numeric: tabular-nums; } .idinfo .err { color: var(--danger); }
   .parcel-tint { filter: sepia(1) saturate(9) hue-rotate(-8deg) brightness(1.9) drop-shadow(0 0 .6px #ffd60a); }
   .pin { background: none; border: 0; }
   .pin div { width: 26px; height: 26px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: var(--c); border: 2px solid #fff;
     box-shadow: 0 2px 5px #0009; display: grid; place-items: center; }
-  .pin div span { transform: rotate(45deg); color: #111; font: 700 13px/1 system-ui, sans-serif; }
+  .pin div span { transform: rotate(45deg); color: #111; font: 700 13px/1 var(--font); }
   .pinpop { display: flex; flex-direction: column; gap: 6px; width: 230px; }
-  .pinpop select, .pinpop input, .pinpop textarea { background: #fff; color: #111; border: 1px solid #ccc; border-radius: 6px; padding: 5px 7px; font: 12.5px system-ui, sans-serif; resize: vertical; }
-  .pinpop .pm { color: #666; font: 11px var(--mono); line-height: 1.5; }
+  .pinpop select, .pinpop input, .pinpop textarea { width: 100%; max-width: none; height: auto; min-height: 30px; padding: 6px 8px; border: 0; border-radius: 7px; background-color: var(--fill); color: var(--text); font-size: 12.5px; resize: vertical; }
+  .pinpop select { padding-right: 26px; }
+  .pinpop .pm { color: var(--muted); font-size: 11px; line-height: 1.5; font-variant-numeric: tabular-nums; }
   .pinpop .pa { display: flex; gap: 6px; align-items: center; }
-  .pinpop .pa a { color: #0a66c2; margin-right: auto; }
-  .pinpop button { background: #eee; color: #222; border-color: #ccc; padding: 4px 9px; font-size: 12px; }
-  .mk { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-top: 1px solid var(--line); }
-  .mk:first-child { border-top: 0; }
-  .mk i { width: 18px; height: 18px; border-radius: 50%; flex: none; display: grid; place-items: center; font: 700 11px system-ui; font-style: normal; color: #111; }
-  .mk .nm { flex: 1; min-width: 0; cursor: pointer; }
-  .mk .nm b { display: block; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .mk .nm small { color: var(--muted); font-size: 11px; }
-  .mk button { padding: 3px 7px; font-size: 11.5px; }
-  .mkhead { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin: 10px 0 2px; }
-  button.rec { background: #5a1f1a; border-color: var(--danger); }
+  .pinpop .pa a { color: var(--accent); margin-right: auto; }
+  .pinpop button { padding: 5px 10px; font-size: 12px; }
   .gpsdot { animation: pulse 2s ease-out infinite; }
   @keyframes pulse { 50% { stroke-opacity: .5; } }
 
   /* guided tour */
-  .head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
-  #btnTour { padding: 5px 10px; font-size: 12px; border-color: var(--accent); color: var(--accent); background: transparent; white-space: nowrap; }
-  #btnTour:hover { background: #2a2a1c; }
-  #tourSpot { position: fixed; z-index: 2500; border-radius: 10px; pointer-events: none; border: 2px solid var(--accent);
-    box-shadow: 0 0 0 9999px rgba(5, 8, 9, .58); transition: all .25s ease; }
+  #tourSpot { position: fixed; z-index: 2500; border-radius: 12px; pointer-events: none; border: 2px solid var(--accent);
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, .38); transition: all .25s ease; }
   #tourSpot.none { border-color: transparent; }
-  #tourPop { position: fixed; z-index: 2600; width: 340px; max-width: calc(100vw - 24px); background: #1e2627; border: 1px solid var(--line); border-radius: 12px;
-    padding: 14px 16px 12px; box-shadow: 0 12px 40px #000c; transition: left .25s ease, top .25s ease; }
-  #tourPop.wide { width: 460px; }
-  #tourPop h3 { margin: 4px 0 6px; font-size: 16px; }
-  .tp-ch { display: flex; justify-content: space-between; color: var(--accent); font-size: 11px; text-transform: uppercase; letter-spacing: .8px; }
-  .tp-ch #tourCount { color: var(--muted); }
-  .tp-body { color: #cfd6d1; font-size: 13px; line-height: 1.5; }
+  #tourPop { position: fixed; z-index: 2600; width: 340px; max-width: calc(100vw - 24px); background: #fff; border-radius: 14px;
+    padding: 16px 18px 14px; box-shadow: 0 0 0 .5px rgba(0, 0, 0, .12), 0 18px 50px rgba(0, 0, 0, .3); transition: left .25s ease, top .25s ease; }
+  #tourPop.wide { width: 470px; }
+  #tourPop h3 { margin: 4px 0 6px; font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
+  .tp-ch { display: flex; justify-content: space-between; color: var(--accent); font-size: 12px; font-weight: 600; }
+  .tp-ch #tourCount { color: var(--muted); font-weight: 500; font-variant-numeric: tabular-nums; }
+  .tp-body { color: var(--text2); font-size: 13px; line-height: 1.5; }
   .tp-body p { margin: 0 0 8px; } .tp-body ul { margin: 0 0 8px; padding-left: 18px; } .tp-body li { margin: 2px 0; }
-  .tp-body b { color: var(--text); } .tp-body code { font: 12px var(--mono); background: #121718; padding: 1px 5px; border-radius: 4px; }
+  .tp-body b { color: var(--text); } .tp-body code { font: 12px var(--mono); background: var(--fill); padding: 1px 5px; border-radius: 4px; }
   .tp-demo { display: flex; align-items: center; gap: 10px; margin: 10px 0 2px; }
   .tp-demo span { color: var(--muted); font-size: 12px; }
-  .tp-sample { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 10px 0 0; padding: 8px 10px; background: #151c1d; border: 1px solid var(--line); border-radius: 8px; font-size: 12px; color: var(--muted); }
-  .tp-sample b { color: var(--text); font-weight: 600; } .tp-sample button { white-space: nowrap; font-size: 12px; padding: 6px 10px; }
+  .tp-sample { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 10px 0 0; padding: 8px 8px 8px 11px; background: var(--panel); border-radius: 9px; font-size: 12px; color: var(--muted); }
+  .tp-sample b { color: var(--text); font-weight: 600; } .tp-sample button { white-space: nowrap; font-size: 12px; padding: 6px 10px; background: #fff; }
   .tp-nav { display: flex; gap: 6px; margin-top: 12px; }
-  .tp-dots { display: flex; gap: 4px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
-  .tp-dots i { width: 6px; height: 6px; border-radius: 3px; background: #3a4645; cursor: pointer; }
-  .tp-dots i.done { background: #8a7a45; } .tp-dots i.on { background: var(--accent); width: 16px; }
+  .tp-dots { display: flex; gap: 4px; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
+  .tp-dots i { width: 6px; height: 6px; border-radius: 3px; background: #D1D1D6; cursor: pointer; }
+  .tp-dots i.done { background: #8EBDF5; } .tp-dots i.on { background: var(--accent); width: 16px; }
   .tp-chapters { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 10px 0 2px; }
-  .tp-chapters button { text-align: left; font-size: 12.5px; padding: 8px 10px; }
-  .tp-chapters button small { display: block; color: var(--muted); font-size: 11px; }
-  @media (max-width: 760px) { #tourPop, #tourPop.wide { left: 12px !important; right: 12px; top: auto !important; bottom: 12px; width: auto; } }
+  .tp-chapters button { text-align: left; font-size: 12.5px; padding: 9px 11px; background: var(--panel); color: var(--text); font-weight: 600; }
+  .tp-chapters button:hover { background: #E5E5EA; }
+  .tp-chapters button small { display: block; color: var(--muted); font-size: 11.5px; font-weight: 400; }
 
   /* 3D modal */
-  #flow { position: fixed; inset: 0; z-index: 2000; background: #0d1112; display: flex; flex-direction: column; }
-  #flowbar { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--panel); }
-  #flowbar label { display: flex; align-items: center; gap: 6px; color: var(--muted); }
-  #flowbar output { font-family: var(--mono); color: var(--text); min-width: 54px; }
+  #flow { position: fixed; inset: 0; z-index: 2000; background: #E5E5EA; display: flex; flex-direction: column; }
+  #flowbar { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; padding: 10px 14px; background: rgba(246, 246, 248, .94); border-bottom: .5px solid rgba(0, 0, 0, .15);
+    -webkit-backdrop-filter: blur(20px) saturate(1.8); backdrop-filter: blur(20px) saturate(1.8); }
+  #flowbar strong { font-size: 14px; }
+  #flowbar label { display: flex; align-items: center; gap: 7px; color: var(--muted); }
+  #flowbar input[type=range] { width: 110px; }
+  #flowbar output { color: var(--text); min-width: 54px; font-variant-numeric: tabular-nums; }
   #flowview { flex: 1; position: relative; }
-  #flowstats { position: absolute; left: 12px; bottom: 12px; padding: 8px 11px; font: 12px var(--mono); line-height: 1.6; }
+  #flowstats { position: absolute; left: 12px; bottom: 12px; padding: 8px 12px; font-size: 12px; line-height: 1.6; font-variant-numeric: tabular-nums; }
 
   @media (max-width: 760px) {
-    #app { flex-direction: column-reverse; }
-    #side { width: 100%; max-height: 46%; border-right: 0; border-top: 1px solid var(--line); }
-    #lidarInfo { max-width: 60%; }
+    :root { --sideW: 0px; --sideH: 46vh; }
+    #app.collapsed { --sideW: 0px; --sideH: 62px; }
+    #side { left: 0; right: 0; top: auto; bottom: 0; height: 46vh; flex-direction: column-reverse; border-radius: 14px 14px 0 0; }
+    #app.collapsed #side { height: 62px; }
+    #rail { width: auto; height: 62px; flex-direction: row; justify-content: space-around; gap: 0; padding: 4px 6px calc(4px + env(safe-area-inset-bottom));
+      border-right: 0; border-top: .5px solid var(--line); }
+    #rail .mark, #rail .sp { display: none; }
+    #rail button { flex: 1; width: auto; height: 52px; }
+    #panel { width: auto; flex: 1; }
+    .ptop { padding: 10px 14px 8px; }
+    .brand { display: none; }
+    #paneTitle { font-size: 18px; margin-bottom: 8px; }
+    #lidarInfo { max-width: 60%; bottom: calc(var(--sideH) + 36px); }
+    .leaflet-control-attribution { font-size: 9.5px; }
+    #tourPop, #tourPop.wide { left: 12px !important; right: 12px; top: 12px !important; bottom: auto; width: auto; }
   }
 </style>
 </head>
 <body>
 <div id="app">
   <aside id="side">
-    <div class="head">
-      <div>
-        <h1>Grade<b>Scout</b></h1>
-        <div class="sub">USGS 3DEP lidar · drainage · profiles · cut/fill</div>
+    <nav id="rail" aria-label="Sections">
+      <div class="mark" title="GradeScout"><svg viewBox="0 0 24 24"><path d="M3 15c4-5 7 1 11-3s5-4 7-5"/><path d="M3 20c4-4 8 0 12-2.5s5-3 6-3"/></svg></div>
+      <button data-pane="map" class="on" title="Base map, imagery and lidar"><svg viewBox="0 0 24 24"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z M9 3v15 M15 6v15"/></svg>Map</button>
+      <button data-pane="layers" title="Parcels, soils, flood zones and other data layers"><svg viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z M3 13l9 5 9-5"/></svg>Layers</button>
+      <button data-pane="draw" title="Draw or import a field, or draw a profile line"><svg viewBox="0 0 24 24"><path d="M4 18L9 5l8 3 3 10z"/></svg>Draw</button>
+      <button data-pane="field" title="Drainage, soils and grade for your field"><svg viewBox="0 0 24 24"><path d="M3 17c4-6 7 2 10-3s5-3 8-7 M3 21h18"/></svg>Field</button>
+      <button data-pane="pins" title="Pins, measuring, GPS and tracks"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11a7 7 0 0114 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>Pins</button>
+      <button data-pane="profile" title="Ground elevation along a line"><svg viewBox="0 0 24 24"><path d="M3 18l5-7 4 4 3-5 6 8z"/></svg>Profile</button>
+      <span class="sp"></span>
+      <button id="btnTour" title="Guided tour of every feature"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 114 2c-1 .6-1.5 1.2-1.5 2.5M12 17h.01"/></svg>Tour</button>
+    </nav>
+
+    <div id="panel">
+      <div class="ptop">
+        <div class="brand">GradeScout</div>
+        <h1 id="paneTitle">Map</h1>
+        <div class="searchbox"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg>
+          <input id="search" type="text" placeholder="Search a place, or paste lat, lon" autocomplete="off"></div>
       </div>
-      <button id="btnTour" title="Guided tour of every feature">? Tour</button>
+
+      <div id="panes">
+        <section class="pane on" data-pane="map">
+          <h2 class="sh">Base map</h2>
+          <div class="card">
+            <div class="row"><label for="baseSel">Show</label><select id="baseSel"></select></div>
+            <div id="baseRelRow" class="row hidden"><label for="baseRel" id="baseRelLbl">Imagery release</label><select id="baseRel"></select></div>
+            <div id="baseStyRow" class="row hidden"><label for="baseSty">Show as</label><select id="baseSty"></select></div>
+            <div id="baseCap" class="cap"></div>
+            <div class="row"><label for="swipeOn">Swipe compare</label><input id="swipeOn" type="checkbox"></div>
+            <div id="cmpRow" class="row hidden"><label for="cmpSel">Right of the divider</label><select id="cmpSel"></select></div>
+            <div id="cmpRelRow" class="row hidden"><label for="cmpRel" id="cmpRelLbl">Imagery release</label><select id="cmpRel"></select></div>
+            <div id="cmpStyRow" class="row hidden"><label for="cmpSty">Show as</label><select id="cmpSty"></select></div>
+            <div id="cmpCap" class="cap"></div>
+            <p class="hint">Open this spot in <span id="openLinks"></span></p>
+          </div>
+
+          <h2 class="sh">Lidar</h2>
+          <div class="card">
+            <div class="row"><label for="lidarOn">Show lidar relief</label><input id="lidarOn" type="checkbox" checked></div>
+            <div class="row"><label for="lidarMode">Style</label>
+              <select id="lidarMode">
+                <option value="Hillshade Gray">Bare-earth hillshade</option>
+                <option value="Hillshade Multidirectional">Multi-directional shade</option>
+                <option value="Hillshade Elevation Tinted">Elevation tinted</option>
+                <option value="Slope Map">Slope</option>
+              </select></div>
+            <div class="row"><label for="lidarOpacity">Opacity</label><input id="lidarOpacity" type="range" min="0" max="100" value="65"></div>
+            <div class="row"><label for="contoursOn">2 ft contours (USGS)</label><input id="contoursOn" type="checkbox"></div>
+            <div class="row"><label for="labelsOn">Roads and labels</label><input id="labelsOn" type="checkbox"></div>
+          </div>
+          <p class="foot">Elevation from USGS 3DEP (public domain), imagery from Esri. Drainage uses priority-flood depression filling and D8 flow accumulation inside the analysis window, so water arriving from far outside the window is undercounted.</p>
+        </section>
+
+        <section class="pane" data-pane="layers">
+          <h2 class="sh">Data layers</h2>
+          <div class="card">
+            <div id="ovList"></div>
+            <div id="cdlRow" class="hidden">
+              <div class="row"><label for="cdlYear">Crop year</label><select id="cdlYear"></select></div>
+              <div class="cdlleg">
+                <span><i style="background:#ffd300"></i>Corn</span><span><i style="background:#267000"></i>Soybeans</span><span><i style="background:#ff2626"></i>Cotton</span>
+                <span><i style="background:#00a8e2"></i>Rice</span><span><i style="background:#a87000"></i>Winter wheat</span><span><i style="background:#ff9e0b"></i>Sorghum</span>
+                <span><i style="background:#bfbf7a"></i>Fallow</span><span><i style="background:#93cc93"></i>Forest</span><span><i style="background:#7cafaf"></i>Woody wetland</span>
+              </div>
+            </div>
+            <div class="row"><label for="ovOpacity">Layer opacity</label><input id="ovOpacity" type="range" min="10" max="100" value="70"></div>
+            <p id="ovHint" class="hint hidden">Click the map for owner, public land, soil, flood-zone, wetland and section details.</p>
+          </div>
+        </section>
+
+        <section class="pane" data-pane="draw">
+          <h2 class="sh">Analyse ground</h2>
+          <div class="card">
+            <div class="btns grow">
+              <button id="btnField" class="primary">Draw field</button>
+              <button id="btnProfile">Draw profile line</button>
+            </div>
+            <div class="btns grow"><button id="btnImport" title="Google Earth KML/KMZ, GPX, GeoJSON, or a zipped shapefile">Import boundary file</button></div>
+            <input id="fileIn" type="file" accept=".kml,.kmz,.gpx,.geojson,.json,.zip" hidden>
+          </div>
+          <p class="foot">Click the map to place corners. Click the first point or double-click to finish, and press Esc to cancel. You can also drop a boundary file on the map. After analysing, use <b>Add split line</b> to divide a field into sections with their own grade.</p>
+        </section>
+
+        <section class="pane" data-pane="field">
+          <div id="fieldCard" class="hidden">
+            <p id="fSummary" class="summary"></p>
+            <div class="card stats kpi">
+              <div class="stat"><div class="k">Area</div><div class="v" id="fArea">–</div></div>
+              <div class="stat"><div class="k">Slope</div><div class="v" id="fSlope">–</div></div>
+              <div class="stat"><div class="k">Falls toward</div><div class="v" id="fHeading">–</div></div>
+              <div class="stat"><div class="k">Relief</div><div class="v" id="fRange">–</div></div>
+              <div class="stat"><div class="k">Largest outlet</div><div class="v" id="fOutlet">–</div></div>
+              <div class="stat" title="Area holding 2 in of water or more"><div class="k">Ponding</div><div class="v" id="fPond">–</div></div>
+            </div>
+
+            <h2 class="sh">Soils <small>USDA SSURGO</small></h2>
+            <div class="card"><div id="soilList"></div></div>
+
+            <h2 class="sh">Map display</h2>
+            <div class="card">
+              <div class="row stack"><label for="overlayMode">Colour the field by</label>
+                <select id="overlayMode"><option value="elev">Elevation</option><option value="cutfill">Cut/fill</option><option value="slope">Slope</option><option value="off">Off</option></select>
+                <div id="legend" class="legend"></div>
+                <div class="legend-lbl"><span id="legLo"></span><span id="legHi"></span></div></div>
+              <div class="row"><label for="overlayOpacity">Opacity</label><input id="overlayOpacity" type="range" min="0" max="100" value="80"></div>
+              <div id="linesBox">
+                <div class="row"><label for="drainOn">Drainage paths</label><input id="drainOn" type="checkbox" checked></div>
+                <div class="row"><label for="drainDetail">Lines draining at least</label>
+                  <select id="drainDetail"><option value="0.5">0.5 ac</option><option value="2" selected>2 ac</option><option value="10">10 ac</option></select></div>
+                <div class="row"><label for="ctrInterval">Contours</label>
+                  <select id="ctrSource"><option value="existing">Existing</option><option value="design">Design</option></select>
+                  <select id="ctrInterval"><option value="0">Off</option><option value="0.1">0.1 ft</option><option value="0.2">0.2 ft</option><option value="0.25">0.25 ft</option><option value="0.5">0.5 ft</option><option value="1">1 ft</option><option value="2">2 ft</option></select></div>
+              </div>
+            </div>
+
+            <div id="designBox">
+              <h2 class="sh">Design grade (cut and fill)</h2>
+              <div class="card">
+                <div id="secList" class="chips"></div>
+                <div class="btns grow"><button id="btnSplit">Add split line</button><button id="btnUnsplit" class="ghost">Remove splits</button></div>
+                <div class="row"><label for="dSlope"><span id="secName">Section 1</span> slope %</label><input id="dSlope" type="number" step="0.01" min="0" max="20"></div>
+                <div class="row"><label for="dHeading">Falls toward °</label><input id="dHeading" type="number" step="1" min="0" max="360"></div>
+                <div class="row"><label for="dRatio">Cut : fill ratio (all)</label><input id="dRatio" type="number" step="0.05" min="0.8" max="2" value="1.15"></div>
+                <div class="btns"><button id="btnBestFit">Best fit</button><button id="btnApplyAll">Use on all sections</button></div>
+                <div class="stats" style="border-top:.5px solid var(--line)">
+                  <div class="stat"><div class="k">Cut</div><div class="v cut" id="fCut">–</div></div>
+                  <div class="stat"><div class="k">Fill</div><div class="v fill" id="fFill">–</div></div>
+                  <div class="stat"><div class="k">Max cut</div><div class="v cut" id="fMaxCut">–</div></div>
+                  <div class="stat"><div class="k">Max fill</div><div class="v fill" id="fMaxFill">–</div></div>
+                </div>
+              </div>
+            </div>
+
+            <div id="outBox">
+              <h2 class="sh">Share and export</h2>
+              <div class="card">
+                <div class="btns grow">
+                  <button id="btn3d" class="primary">3D rain</button>
+                  <button id="btnPdf">PDF report</button>
+                  <button id="btnFieldCsv">CSV</button>
+                </div>
+                <div class="btns grow">
+                  <button id="btnEdit">Edit shape</button>
+                  <button id="btnSave">Save</button>
+                  <button id="btnShare">Share</button>
+                  <button id="btnFieldClear" class="ghost">Clear</button>
+                </div>
+                <div class="row"><select id="exportSel" class="wide">
+                  <option value="">Export to other map apps…</option>
+                  <option value="kml">Google Earth (.kml): boundary, drainage, contours</option>
+                  <option value="geojson">QGIS / ArcGIS (.geojson): all layers</option>
+                  <option value="shp">Boundary shapefile (.zip) for farm software</option>
+                </select></div>
+              </div>
+            </div>
+          </div>
+          <div class="empty card">
+            <b>No field yet</b>
+            <p>Draw a field's corners on the map, or import a boundary, to see where its water goes.</p>
+            <div class="btns"><button class="primary" data-click="btnField">Draw field</button><button data-click="btnImport">Import boundary</button></div>
+          </div>
+
+          <div id="savedCard" class="hidden">
+            <h2 class="sh">Saved fields</h2>
+            <div class="card"><div id="savedList"></div></div>
+          </div>
+        </section>
+
+        <section class="pane" data-pane="pins">
+          <h2 class="sh">Scouting</h2>
+          <div class="card">
+            <div class="btns grow">
+              <button id="btnPin" title="Mark a tile outlet, wet spot, washout…">Drop pin</button>
+              <button id="btnMeasure" title="Measure a distance, or close the shape for an area">Measure</button>
+            </div>
+            <div class="btns grow">
+              <button id="btnGps" title="Show where you are (phone or laptop GPS)">My location</button>
+              <button id="btnTrack" title="Walk or drive a line; use it as a profile or a field boundary">Record track</button>
+            </div>
+            <div id="gpsInfo" class="cap"></div>
+          </div>
+          <div id="markList" class="card" style="margin-top:10px"></div>
+          <select id="markExport" class="wide hidden" style="margin-top:10px;background-color:var(--card)">
+            <option value="">Export pins and tracks…</option>
+            <option value="kml">Google Earth (.kml)</option>
+            <option value="gpx">GPS / onX / Garmin (.gpx)</option>
+            <option value="geojson">QGIS / ArcGIS (.geojson)</option>
+          </select>
+          <p class="foot">Pins and tracks are saved in this browser. Import onX, Garmin or Google Earth waypoints with <b>Import boundary file</b> in Draw (KML, KMZ, GPX, GeoJSON).</p>
+        </section>
+
+        <section class="pane" data-pane="profile">
+          <div id="profileCard" class="hidden">
+            <div class="card">
+              <canvas id="profileCanvas"></canvas>
+              <div id="profileHover"></div>
+            </div>
+            <div class="card stats" style="margin-top:10px">
+              <div class="stat"><div class="k">Length</div><div class="v" id="pLen">–</div></div>
+              <div class="stat"><div class="k">Average grade</div><div class="v" id="pGrade">–</div></div>
+              <div class="stat"><div class="k">Start → end</div><div class="v" id="pEnds">–</div></div>
+              <div class="stat"><div class="k">Low / high</div><div class="v" id="pLoHi">–</div></div>
+              <div class="stat"><div class="k">Total rise</div><div class="v" id="pRise">–</div></div>
+              <div class="stat"><div class="k">Total fall</div><div class="v" id="pFall">–</div></div>
+            </div>
+            <div class="btns grow">
+              <button id="btnProfileCsv" style="background:var(--card)">CSV</button>
+              <button id="btnProfileClear" class="ghost">Clear</button>
+            </div>
+          </div>
+          <div class="empty card">
+            <b>No profile yet</b>
+            <p>Draw a line across the ground to see how it rises and falls.</p>
+            <div class="btns"><button class="primary" data-click="btnProfile">Draw profile line</button></div>
+          </div>
+        </section>
+      </div>
+      <div id="status"></div>
     </div>
-
-    <input id="search" type="text" placeholder="Search a place, or paste lat, lon…" autocomplete="off">
-
-    <div class="card">
-      <h2>Map views</h2>
-      <div class="row"><label for="baseSel">Base map</label><select id="baseSel"></select></div>
-      <div id="baseRelRow" class="row hidden"><label for="baseRel" id="baseRelLbl">Imagery release</label><select id="baseRel"></select></div>
-      <div id="baseStyRow" class="row hidden"><label for="baseSty">Show as</label><select id="baseSty"></select></div>
-      <div id="baseCap" class="cap"></div>
-      <div class="row"><label for="swipeOn">Swipe compare</label><input id="swipeOn" type="checkbox"></div>
-      <div id="cmpRow" class="row hidden"><label for="cmpSel">Right of the divider</label><select id="cmpSel"></select></div>
-      <div id="cmpRelRow" class="row hidden"><label for="cmpRel" id="cmpRelLbl">Imagery release</label><select id="cmpRel"></select></div>
-      <div id="cmpStyRow" class="row hidden"><label for="cmpSty">Show as</label><select id="cmpSty"></select></div>
-      <div id="cmpCap" class="cap"></div>
-      <div class="hint" style="margin-top:6px">Open here in: <span id="openLinks"></span></div>
-    </div>
-
-    <div class="card">
-      <h2>Data overlays</h2>
-      <div id="ovList"></div>
-      <div id="cdlRow" class="hidden">
-        <div class="row"><label for="cdlYear">Crop year</label><select id="cdlYear"></select></div>
-        <div class="cdlleg">
-          <span><i style="background:#ffd300"></i>Corn</span><span><i style="background:#267000"></i>Soybeans</span><span><i style="background:#ff2626"></i>Cotton</span>
-          <span><i style="background:#00a8e2"></i>Rice</span><span><i style="background:#a87000"></i>Winter wheat</span><span><i style="background:#ff9e0b"></i>Sorghum</span>
-          <span><i style="background:#bfbf7a"></i>Fallow</span><span><i style="background:#93cc93"></i>Forest</span><span><i style="background:#7cafaf"></i>Woody wetland</span>
-        </div>
-      </div>
-      <div class="row"><label for="ovOpacity">Overlay opacity</label><input id="ovOpacity" type="range" min="10" max="100" value="70"></div>
-      <p id="ovHint" class="hint hidden" style="margin:4px 0 0">Click the map for owner, public land, soil, flood-zone, wetland and section details.</p>
-    </div>
-
-    <div class="card">
-      <h2>Lidar layer</h2>
-      <div class="row"><label for="lidarOn">Show lidar relief</label><input id="lidarOn" type="checkbox" checked></div>
-      <div class="row"><label for="lidarMode">Style</label>
-        <select id="lidarMode">
-          <option value="Hillshade Gray">Bare-earth hillshade</option>
-          <option value="Hillshade Multidirectional">Multi-directional shade</option>
-          <option value="Hillshade Elevation Tinted">Elevation tinted</option>
-          <option value="Slope Map">Slope</option>
-        </select></div>
-      <div class="row"><label for="lidarOpacity">Opacity (see through canopy)</label><input id="lidarOpacity" type="range" min="0" max="100" value="65"></div>
-      <div class="row"><label for="contoursOn">2 ft contours (USGS)</label><input id="contoursOn" type="checkbox"></div>
-      <div class="row"><label for="labelsOn">Roads &amp; labels</label><input id="labelsOn" type="checkbox"></div>
-    </div>
-
-    <div class="card">
-      <h2>Tools</h2>
-      <div class="btns grow">
-        <button id="btnField" class="primary">Draw field</button>
-        <button id="btnProfile">Draw profile line</button>
-      </div>
-      <div class="btns grow" style="margin-top:6px"><button id="btnImport" title="Google Earth KML/KMZ, GPX, GeoJSON, or a zipped shapefile">Import boundary file</button></div>
-      <input id="fileIn" type="file" accept=".kml,.kmz,.gpx,.geojson,.json,.zip" hidden>
-      <p class="hint" style="margin:8px 0 0">Click the map to place corners. Click the first point or double-click to finish. Esc cancels. You can also drop a boundary file on the map. After analysing, use <b>Add split line</b> to divide a field into sections with their own grade.</p>
-    </div>
-
-    <div class="card">
-      <h2>Pins, tracks &amp; GPS</h2>
-      <div class="btns grow">
-        <button id="btnPin" title="Mark a tile outlet, wet spot, washout…">Drop pin</button>
-        <button id="btnMeasure" title="Measure a distance, or close the shape for an area">Measure</button>
-      </div>
-      <div class="btns grow" style="margin-top:6px">
-        <button id="btnGps" title="Show where you are (phone or laptop GPS)">My location</button>
-        <button id="btnTrack" title="Walk or drive a line; use it as a profile or a field boundary">Record track</button>
-      </div>
-      <div id="gpsInfo" class="cap" style="margin-top:6px"></div>
-      <div id="markList"></div>
-      <select id="markExport" style="width:100%;margin-top:8px" class="hidden">
-        <option value="">Export pins &amp; tracks…</option>
-        <option value="kml">Google Earth (.kml)</option>
-        <option value="gpx">GPS / onX / Garmin (.gpx)</option>
-        <option value="geojson">QGIS / ArcGIS (.geojson)</option>
-      </select>
-      <p class="hint" style="margin:8px 0 0">Pins and tracks are saved in this browser. Import onX, Garmin or Google Earth waypoints with <b>Import boundary file</b> (KML, KMZ, GPX, GeoJSON).</p>
-    </div>
-
-    <div id="fieldCard" class="card hidden">
-      <h2>Field</h2>
-      <div class="stats">
-        <div class="stat"><div class="k">Area</div><div class="v" id="fArea">–</div></div>
-        <div class="stat"><div class="k">Elevation range</div><div class="v" id="fRange">–</div></div>
-        <div class="stat"><div class="k">Best-fit slope</div><div class="v" id="fSlope">–</div></div>
-        <div class="stat"><div class="k">Falls toward</div><div class="v" id="fHeading">–</div></div>
-        <div class="stat"><div class="k">Largest outlet</div><div class="v" id="fOutlet">–</div></div>
-        <div class="stat"><div class="k">Ponding (≥2 in)</div><div class="v" id="fPond">–</div></div>
-      </div>
-
-      <h2 style="margin-top:14px">Soils in field (USDA SSURGO)</h2>
-      <div id="soilList"></div>
-
-      <div class="row" style="margin-top:12px"><label for="overlayMode">Overlay</label>
-        <select id="overlayMode"><option value="elev">Elevation</option><option value="cutfill">Cut / fill</option><option value="slope">Slope classes</option><option value="off">Off</option></select></div>
-      <div class="row"><label for="overlayOpacity">Overlay opacity</label><input id="overlayOpacity" type="range" min="0" max="100" value="80"></div>
-      <div id="legend" class="legend"></div>
-      <div class="legend-lbl"><span id="legLo"></span><span id="legHi"></span></div>
-
-      <div id="linesBox">
-      <div class="row" style="margin-top:12px"><label for="drainOn">Drainage paths</label><input id="drainOn" type="checkbox" checked></div>
-      <div class="row"><label for="drainDetail">Show lines draining at least</label>
-        <select id="drainDetail"><option value="0.5">0.5 ac</option><option value="2" selected>2 ac</option><option value="10">10 ac</option></select></div>
-      <div class="row"><label for="ctrInterval">Contours</label>
-        <select id="ctrSource"><option value="existing">Existing</option><option value="design">Design</option></select>
-        <select id="ctrInterval"><option value="0">Off</option><option value="0.1">0.1 ft</option><option value="0.2">0.2 ft</option><option value="0.25">0.25 ft</option><option value="0.5">0.5 ft</option><option value="1">1 ft</option><option value="2">2 ft</option></select></div>
-      </div>
-
-      <div id="designBox">
-      <h2 style="margin-top:14px">Design surface (cut / fill)</h2>
-      <div id="secList" class="chips"></div>
-      <div class="btns grow"><button id="btnSplit">Add split line</button><button id="btnUnsplit" class="ghost">Remove splits</button></div>
-      <div class="row" style="margin-top:10px"><label for="dSlope"><span id="secName">Section 1</span> slope %</label><input id="dSlope" type="number" step="0.01" min="0" max="20"></div>
-      <div class="row"><label for="dHeading">Falls toward °</label><input id="dHeading" type="number" step="1" min="0" max="360"></div>
-      <div class="row"><label for="dRatio">Cut : fill ratio (all)</label><input id="dRatio" type="number" step="0.05" min="0.8" max="2" value="1.15"></div>
-      <div class="btns"><button id="btnBestFit" class="ghost">Best fit</button><button id="btnApplyAll" class="ghost">Use on all sections</button></div>
-      <div class="stats" style="margin-top:8px">
-        <div class="stat"><div class="k">Cut</div><div class="v cut" id="fCut">–</div></div>
-        <div class="stat"><div class="k">Fill</div><div class="v fill" id="fFill">–</div></div>
-        <div class="stat"><div class="k">Max cut</div><div class="v cut" id="fMaxCut">–</div></div>
-        <div class="stat"><div class="k">Max fill</div><div class="v fill" id="fMaxFill">–</div></div>
-      </div>
-      </div>
-      <div id="outBox">
-
-      <div class="btns grow" style="margin-top:12px">
-        <button id="btn3d" class="primary">3D rain</button>
-        <button id="btnPdf">PDF report</button>
-        <button id="btnFieldCsv">CSV</button>
-      </div>
-      <select id="exportSel" style="width:100%;margin-top:6px">
-        <option value="">Export to other map apps…</option>
-        <option value="kml">Google Earth (.kml): boundary, drainage, contours</option>
-        <option value="geojson">QGIS / ArcGIS (.geojson): all layers</option>
-        <option value="shp">Boundary shapefile (.zip) for farm software</option>
-      </select>
-      <div class="btns grow" style="margin-top:6px">
-        <button id="btnEdit">Edit shape</button>
-        <button id="btnSave">Save</button>
-        <button id="btnShare">Share</button>
-        <button id="btnFieldClear" class="ghost">Clear</button>
-      </div>
-      </div>
-    </div>
-
-    <div id="savedCard" class="card hidden">
-      <h2>Saved fields</h2>
-      <div id="savedList"></div>
-    </div>
-
-    <div id="profileCard" class="card hidden">
-      <h2>Elevation profile</h2>
-      <canvas id="profileCanvas"></canvas>
-      <div id="profileHover"></div>
-      <div class="stats" style="margin-top:6px">
-        <div class="stat"><div class="k">Length</div><div class="v" id="pLen">–</div></div>
-        <div class="stat"><div class="k">Avg grade</div><div class="v" id="pGrade">–</div></div>
-        <div class="stat"><div class="k">Start → end</div><div class="v" id="pEnds">–</div></div>
-        <div class="stat"><div class="k">Low / high</div><div class="v" id="pLoHi">–</div></div>
-        <div class="stat"><div class="k">Total rise</div><div class="v" id="pRise">–</div></div>
-        <div class="stat"><div class="k">Total fall</div><div class="v" id="pFall">–</div></div>
-      </div>
-      <div class="btns grow" style="margin-top:10px">
-        <button id="btnProfileCsv">CSV</button>
-        <button id="btnProfileClear" class="ghost">Clear</button>
-      </div>
-    </div>
-
-    <div id="status"></div>
-    <p class="hint">Elevation: USGS 3DEP (public domain). Imagery: Esri. Drainage uses priority-flood depression filling + D8 flow accumulation within the analysis window, so areas draining from far outside the window are undercounted.</p>
   </aside>
 
   <div id="mapwrap">
@@ -424,6 +584,18 @@ const fmt = (v, d = 1) => v.toLocaleString('en-US', { minimumFractionDigits: d, 
 const DIRS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
 const compass = deg => DIRS[Math.round(((deg % 360) + 360) % 360 / 22.5) % 16];
 
+const DIR_WORD = { N: 'north', S: 'south', E: 'east', W: 'west' };
+const compassWords = c => c.length === 1 ? DIR_WORD[c] : c.length === 2 ? DIR_WORD[c[0]] + DIR_WORD[c[1]] : DIR_WORD[c[0]] + '-' + DIR_WORD[c[1]] + DIR_WORD[c[2]];
+// one plain sentence above the numbers
+function fieldSummary() {
+  if (!field?.fit) return;
+  const lo = fmt(field.min * M2FT, 0), hi = fmt(field.max * M2FT, 0);
+  let t = `On average the ground falls ${fmt(field.fit.slope, 1)}% toward the ${compassWords(compass(field.fit.heading))}, from ${hi} ft down to ${lo} ft.`;
+  if (field.outletAc) t += ` The largest outlet drains ${fmt(field.outletAc, 1)} ac.`;
+  if (field.pondAc != null) t += field.pondAc >= 0.01 ? ` About ${fmt(field.pondAc, 2)} ac hold 2 in of water or more.` : ' No low spots hold 2 in of water or more.';
+  $('fSummary').textContent = t;
+}
+
 function setStatus(msg, isErr = false) { const s = $('status'); s.textContent = msg || ''; s.classList.toggle('err', isErr); }
 function busy(msg) { $('toastMsg').textContent = msg; $('toast').classList.toggle('hidden', !msg); }
 function download(name, text) {
@@ -436,6 +608,69 @@ function download(name, text) {
 const map = L.map('map', { zoomControl: false }).setView([35.79, -90.42], 15);
 L.control.zoom({ position: 'topright' }).addTo(map);
 L.control.scale({ imperial: true, metric: false, position: 'topright' }).addTo(map);
+// The side panel floats over the map, so frame things in the part of the map you can see:
+// right of the panel on a desktop, above it when it's a bottom sheet on a phone.
+function sideInset() {
+  const s = $('side').getBoundingClientRect(), m = $('map').getBoundingClientRect();
+  return s.width >= m.width - 4 ? { left: 0, bottom: Math.max(0, m.bottom - s.top) } : { left: Math.max(0, s.right - m.left), bottom: 0 };
+}
+{
+  const fit = map.fitBounds.bind(map);
+  map.fitBounds = (bounds, o = {}) => {
+    const { padding, ...rest } = o, p = L.point(padding || [0, 0]), s = sideInset();
+    return fit(bounds, { ...rest, paddingTopLeft: [p.x + s.left, p.y], paddingBottomRight: [p.x, p.y + s.bottom] });
+  };
+}
+function viewAt(ll, z) {                         // setView, centred in the visible part of the map
+  const s = sideInset(), pt = map.project(L.latLng(ll), z).subtract([s.left / 2, -s.bottom / 2]);
+  map.setView(map.unproject(pt, z), z);
+}
+
+// ── side panel: an icon rail that opens one pane at a time ──
+const PANE_TITLES = { map: 'Map', layers: 'Layers', draw: 'Draw', field: 'Field', pins: 'Pins', profile: 'Profile' };
+let paneNow = 'map';
+const paneOpen = () => !$('app').classList.contains('collapsed');
+function setPane(name, { toggle = false } = {}) {
+  if (!PANE_TITLES[name]) return;
+  if (toggle && name === paneNow && paneOpen()) $('app').classList.add('collapsed');
+  else {
+    $('app').classList.remove('collapsed');
+    if (name !== paneNow) $('panes').scrollTop = 0;
+    paneNow = name;
+    document.querySelectorAll('#panes .pane').forEach(p => p.classList.toggle('on', p.dataset.pane === name));
+    $('paneTitle').textContent = PANE_TITLES[name];
+    if (name === 'profile') requestAnimationFrame(() => drawProfile());   // the chart needs a visible canvas to size itself
+  }
+  document.querySelectorAll('#rail [data-pane]').forEach(b => { const on = b.dataset.pane === paneNow && paneOpen(); b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+}
+const paneOf = el => el?.closest?.('#panes .pane')?.dataset.pane;
+$('rail').addEventListener('click', e => { const b = e.target.closest('[data-pane]'); if (b) setPane(b.dataset.pane, { toggle: true }); });
+document.addEventListener('click', e => { const b = e.target.closest('[data-click]'); if (b) $(b.dataset.click).click(); });
+// open the Field or Profile pane when new results appear
+const showPaneWhenShown = (id, pane) => {
+  let was = !$(id).classList.contains('hidden');
+  new MutationObserver(() => { const now = !$(id).classList.contains('hidden'); if (now && !was) setPane(pane); was = now; })
+    .observe($(id), { attributes: true, attributeFilter: ['class'] });
+};
+showPaneWhenShown('fieldCard', 'field'); showPaneWhenShown('profileCard', 'profile');
+// call fn whenever an input's value changes, including when code sets .value directly
+function onValueSet(el, fn) {
+  const d = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), 'value');
+  Object.defineProperty(el, 'value', { configurable: true, get() { return d.get.call(this); }, set(v) { d.set.call(this, v); fn(); } });
+  el.addEventListener('input', fn); el.addEventListener('change', fn); fn();
+}
+// sliders: fill the track up to the thumb
+document.querySelectorAll('input[type=range]').forEach(r => onValueSet(r, () => r.style.setProperty('--p', (r.value - r.min) / (r.max - r.min) * 100 + '%')));
+// short option lists read better as segmented controls; the <select> stays as the source of truth
+function segmented(id) {
+  const sel = $(id), seg = document.createElement('div');
+  seg.className = 'seg'; seg.setAttribute('role', 'group');
+  seg.innerHTML = [...sel.options].map(o => `<button type="button" data-v="${o.value}">${o.textContent}</button>`).join('');
+  sel.classList.add('seg-src'); sel.after(seg);
+  seg.onclick = e => { const b = e.target.closest('button'); if (!b || b.dataset.v === sel.value) return; sel.value = b.dataset.v; sel.dispatchEvent(new Event('change', { bubbles: true })); };
+  onValueSet(sel, () => seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === sel.value)));
+}
+['overlayMode', 'drainDetail', 'ctrSource'].forEach(segmented);
 for (const [name, z] of [['lidar', 300], ['contours', 320], ['field', 380], ['labels', 450]]) {
   map.createPane(name).style.zIndex = z;
 }
@@ -842,8 +1077,8 @@ GROUP BY M.musym, M.muname, MA.drclassdcd, MA.hydgrpdcd, MA.niccdcd ORDER BY a D
     const total = rows.reduce((s, r) => s + +r.a, 0) || 1;
     me.soils = rows.map(r => ({ sym: r.musym, name: r.muname, drain: r.drclassdcd, hsg: r.hydgrpdcd, cls: r.niccdcd, pct: +r.a / total * 100 })).filter(s => s.pct >= 0.5);
     $('soilList').innerHTML = me.soils.length ? me.soils.map(s =>
-      `<div class="soil"><div class="bar" style="width:${s.pct}%"></div><span class="pct">${fmt(s.pct, 0)}%</span>` +
-      `<span class="nm" title="${esc(s.name)}">${esc(s.sym)} · ${esc(s.name)}</span><small>${esc(s.drain || '–')} · HSG ${esc(s.hsg || '–')}${s.cls ? ' · class ' + esc(s.cls) : ''}</small></div>`).join('')
+      `<div class="soil"><div class="nm"><span title="${esc(s.name)}"><code>${esc(s.sym)}</code>${esc(s.name)}</span><b>${fmt(s.pct, 0)}%</b></div>` +
+      `<small>${esc(s.drain || 'Drainage not rated')}, hydrologic group ${esc(s.hsg || '–')}${s.cls ? ', class ' + esc(s.cls) : ''}</small><div class="bar" style="width:${s.pct}%"></div></div>`).join('')
       : '<span class="hint">No soil survey mapped here.</span>';
   } catch (e) { if (field === me) $('soilList').innerHTML = `<span class="hint">Soil survey unavailable (${esc(e.message)})</span>`; }
 }
@@ -859,7 +1094,7 @@ function updateOpenLinks() {
     'OSM': `https://www.openstreetmap.org/#map=${z}/${la}/${lo}`,
     'USGS TopoView': `https://ngmdb.usgs.gov/topoview/viewer/#${z}/${la}/${lo}`,
   };
-  $('openLinks').innerHTML = Object.entries(links).map(([k, u]) => `<a href="${u}" target="_blank" rel="noopener">${k}</a>`).join(' · ');
+  $('openLinks').innerHTML = Object.entries(links).map(([k, u]) => `<a href="${u}" target="_blank" rel="noopener">${k}</a>`).join('');
 }
 updateOpenLinks();
 
@@ -1146,7 +1381,7 @@ function removeMark(id) {
 }
 function focusMark(id) {
   const lay = markLayers.get(id); if (!lay) return;
-  if (lay.getLatLng) { map.setView(lay.getLatLng(), Math.max(map.getZoom(), 17)); lay.openPopup(); }
+  if (lay.getLatLng) { viewAt(lay.getLatLng(), Math.max(map.getZoom(), 17)); lay.openPopup(); }
   else map.fitBounds(lay.getBounds(), { padding: [50, 50], maxZoom: 18 });
 }
 // a track whose ends meet (within 8% of its length, or 40 m) can be a field boundary
@@ -1206,7 +1441,7 @@ function onGps(pos) {
     gps.ring = L.circle(ll, { radius: acc, color: '#2f80ff', weight: 1, fillOpacity: 0.12, interactive: false }).addTo(map);
     gps.dot = L.circleMarker(ll, { radius: 7, color: '#fff', weight: 2.5, fillColor: '#2f80ff', fillOpacity: 1, className: 'gpsdot' }).bindTooltip('You are here').addTo(map);
   } else { gps.dot.setLatLng(ll); gps.ring.setLatLng(ll).setRadius(acc); }
-  if (first) map.setView(ll, Math.max(map.getZoom(), 17));
+  if (first) viewAt(ll, Math.max(map.getZoom(), 17));
   else if (!map.getBounds().pad(-0.15).contains(ll)) map.panTo(ll);
   if (gps.track && acc <= 30) {                   // skip poor fixes; only add a point after moving 3 m
     const last = gps.track.pts[gps.track.pts.length - 1];
@@ -1354,7 +1589,7 @@ $('search').addEventListener('keydown', async e => {
   if (e.key !== 'Enter') return;
   const q = e.target.value.trim(); if (!q) return;
   const m = q.match(/^\s*(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)\s*$/);
-  if (m) { map.setView([+m[1], +m[2]], 16); return; }
+  if (m) { viewAt([+m[1], +m[2]], 16); return; }
   try {
     const r = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=us&q=' + encodeURIComponent(q));
     const [hit] = await r.json();
@@ -1384,7 +1619,7 @@ async function updateLidarInfo() {
     if (seq !== lidarSeq) return;
     if (!feats.length) { el.textContent = 'No 3DEP lidar indexed at map center'; return; }
     const f = feats[0], start = monthYr(f.collect_start), end = monthYr(f.collect_end);
-    el.innerHTML = `Lidar flown <b>${start === end ? start : start + ' – ' + end}</b> · <b>${f.ql || 'QL ?'}</b><br>${f.project || ''}`;
+    el.innerHTML = `Lidar flown <b>${start === end ? start : start + ' – ' + end}</b>, <b>${f.ql || 'QL ?'}</b><br>${f.project || ''}`;
   } catch { if (seq === lidarSeq) el.textContent = 'Lidar index unavailable'; }
 }
 map.on('moveend', () => { clearTimeout(lidarTimer); lidarTimer = setTimeout(updateLidarInfo, 500); });
@@ -1684,11 +1919,13 @@ async function analyzeField(pts, opts = {}) {
   for (let i = 0; i < inside.length; i++) if (inside[i] && hyd.pond[i] >= 0.05) { pondCells++; pondVol += hyd.pond[i] * A; }
   Object.assign(field, { acres: field.count * A / ACRE_M2, pondAc: pondCells * A / ACRE_M2, pondYd: pondVol / YD3_M3 });
   $('fArea').textContent = fmt(field.acres, 1) + ' ac';
-  $('fRange').textContent = `${fmt(field.min * M2FT, 1)}–${fmt(field.max * M2FT, 1)}`;
+  $('fRange').textContent = fmt((field.max - field.min) * M2FT, 1) + ' ft';
+  $('fRange').title = `${fmt(field.min * M2FT, 1)} to ${fmt(field.max * M2FT, 1)} ft above sea level`;
   $('fSlope').textContent = fmt(field.fit.slope, 3) + ' %';
   $('fHeading').textContent = `${compass(field.fit.heading)} ${Math.round(field.fit.heading)}°`;
   $('fPond').textContent = `${fmt(field.pondAc, 2)} ac`;
   $('fPond').title = `${fmt(field.pondYd, 0)} yd³ of storage`;
+  fieldSummary();
   $('fieldCard').classList.remove('hidden');
 
   renderOverlay(); drawDrainage(); renderContours();
@@ -2029,6 +2266,7 @@ function drawDrainage() {
   field.outletAc = outlets[0]?.[1] || 0;
   field.drainPaths = paths; field.drainLabels = labels;
   $('fOutlet').textContent = field.outletAc ? fmt(field.outletAc, 1) + ' ac' : '–';
+  fieldSummary();
   field.layers.drain = group;
   if ($('drainOn').checked) group.addTo(map);
 }
@@ -2454,8 +2692,8 @@ function drawProfile(hoverIdx = -1, target = null) {
   const L0 = 44 * fs, R0 = 8 * fs, T0 = 8 * fs, B0 = 20 * fs;
   const X = d => L0 + d / D * (W - L0 - R0), Y = z => T0 + (hi - z) / (hi - lo) * (H - T0 - B0);
   if (!target) Object.assign(profile, { L0, R0 });
-  ctx.font = `${10 * fs}px ui-monospace, Menlo, monospace`; ctx.fillStyle = light ? '#555' : '#93a19c';
-  ctx.strokeStyle = light ? '#ddd' : '#2a3435'; ctx.lineWidth = fs;
+  ctx.font = `${10 * fs}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`; ctx.fillStyle = light ? '#555' : '#8E8E93';
+  ctx.strokeStyle = light ? '#ddd' : '#E5E5EA'; ctx.lineWidth = fs;
   for (let k = 0; k <= 4; k++) {
     const z = lo + (hi - lo) * k / 4, y = Y(z);
     ctx.beginPath(); ctx.moveTo(L0, y); ctx.lineTo(W - R0, y); ctx.stroke();
@@ -2469,7 +2707,7 @@ function drawProfile(hoverIdx = -1, target = null) {
   for (const p of s) ctx.lineTo(X(p.d), Y(p.z));
   ctx.lineTo(X(D), H - B0); ctx.closePath(); ctx.fillStyle = grad; ctx.fill();
   ctx.beginPath(); s.forEach((p, i) => i ? ctx.lineTo(X(p.d), Y(p.z)) : ctx.moveTo(X(p.d), Y(p.z)));
-  ctx.strokeStyle = light ? '#d9731a' : '#ff9f43'; ctx.lineWidth = 1.6 * fs; ctx.stroke();
+  ctx.strokeStyle = '#E8730C'; ctx.lineWidth = 1.6 * fs; ctx.stroke();
   if (des) {                                   // design grade, dashed, only where the line is inside the field
     ctx.beginPath(); let pen = false;
     s.forEach((p, i) => { const v = des[i]; if (v !== v) { pen = false; return; } pen ? ctx.lineTo(X(p.d), Y(v)) : ctx.moveTo(X(p.d), Y(v)); pen = true; });
@@ -2478,8 +2716,8 @@ function drawProfile(hoverIdx = -1, target = null) {
   }
   if (hoverIdx >= 0) {
     const p = s[hoverIdx];
-    ctx.strokeStyle = '#ffffffaa'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(X(p.d), T0); ctx.lineTo(X(p.d), H - B0); ctx.stroke();
-    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(X(p.d), Y(p.z), 3.5, 0, 7); ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,.28)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(X(p.d), T0); ctx.lineTo(X(p.d), H - B0); ctx.stroke();
+    ctx.fillStyle = '#E8730C'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(X(p.d), Y(p.z), 4.5, 0, 7); ctx.fill(); ctx.stroke();
   }
 }
 $('profileCanvas').addEventListener('mousemove', e => {
@@ -2572,7 +2810,7 @@ async function openFlow() {
   renderer.setPixelRatio(Math.min(2, devicePixelRatio));
   renderer.setSize(view.clientWidth, view.clientHeight);
   view.prepend(renderer.domElement);
-  const scene = new THREE.Scene(); scene.background = new THREE.Color(0x0d1112);
+  const scene = new THREE.Scene(); scene.background = new THREE.Color(0xdfe0e5);
   const size = Math.max(nx, ny) * cell;
   const camera = new THREE.PerspectiveCamera(45, view.clientWidth / view.clientHeight, size / 1000, size * 10);
   camera.position.set(0, size * 0.55, size * 0.75);
@@ -2820,12 +3058,13 @@ async function tourScene(s) {
 }
 // what the map looked like before the tour, put back when it ends
 function tourSave() {
-  tour.saved = { overlayMode: $('overlayMode').value, drainOn: $('drainOn').checked, ctrInterval: $('ctrInterval').value, layers: Object.keys(active) };
+  tour.saved = { pane: paneNow, collapsed: !paneOpen(), overlayMode: $('overlayMode').value, drainOn: $('drainOn').checked, ctrInterval: $('ctrInterval').value, layers: Object.keys(active) };
   tour.baseWas = null;
 }
 async function tourRestore() {
   const v = tour.saved; if (!v) return;
   tour.saved = null;
+  setPane(v.pane); if (v.collapsed) setPane(v.pane, { toggle: true });
   if (isDemoProfile()) clearProfile();
   clearDemoPins(); map.closePopup();
   await hideSwipe();
@@ -2841,6 +3080,7 @@ const TOUR = [
     body: `<p>GradeScout reads free USGS <b>lidar</b> (laser-scanned bare ground) to show how water moves across your ground, where it ponds or washes, and where beds, orchards, waterways, ponds or a high tunnel will sit best.</p>
       <p>This tour points at each part of the screen. Most steps have a <b>Show me</b> button that runs the feature on a sample field: about 30 acres of open, rolling cropland near Viroqua, in Wisconsin's Driftless Area. You see real results without drawing anything, and each step clears the last one's layers so the map stays readable.</p>
       <p>On the field steps, <b>Show another field</b> switches to a second sample: small family vegetable plots on nearly flat ground in Minnesota, where the runoff is much harder to spot.</p>
+      <p>The icons down the left open each part of the app: <b>Map</b>, <b>Layers</b>, <b>Draw</b>, <b>Field</b>, <b>Pins</b> and <b>Profile</b>. Click the open one again to tuck the panel away.</p>
       <p>Jump to a chapter, or press <b>Next</b> to start at the top. Use ← → keys to move, Esc to leave.</p>`, chapters: true },
 
   { ch: 'Getting around', target: () => $('search'), title: 'Find your ground',
@@ -2856,7 +3096,7 @@ const TOUR = [
     body: `<p>Click <b>Draw field</b>, then click the field's corners on the map. Click the first corner again (or double-click) to finish.</p>
       <p>You can also <b>Import boundary file</b> (Google Earth, shapefile, GeoJSON), use a GPS track, or analyse a landowner parcel, all covered later.</p>`,
     demo: ['Analyse the sample field', ensureDemoField] },
-  { ch: 'Analyse a field', needs: 'field', rect: fieldRect, title: 'Where the water goes',
+  { ch: 'Analyse a field', needs: 'field', pane: 'field', rect: fieldRect, title: 'Where the water goes',
     body: () => `<ul><li><b>Blue lines</b> are where runoff gathers. Thicker lines carry water from more acres.</li>
       <li><b>Boxed labels</b> show how many acres drain out of the field at that spot: your outlets.</li>
       <li><b>Dark blue patches</b> hold 2 in or more of water (ponding). Low spots that pond drown roots, and they're often frost pockets too.</li></ul>
@@ -2921,7 +3161,7 @@ const TOUR = [
       <li><b>Soils</b>, FEMA <b>flood zones</b>, <b>wetlands</b>, <b>streams</b>, section/township lines.</li>
       <li><b>Crop type</b> grown each year, 2008–2025 (USDA).</li></ul><p>One slider sets how see-through they are.</p>`,
     demo: ['Turn on parcels & soils', () => { for (const k of ['parcels', 'soils']) { $('ov_' + k).checked = true; toggleOverlay(k, true); } }] },
-  { ch: 'Land & data', needs: 'field', layers: () => tourSample().lookup, rect: () => document.querySelector('.idpop') ? document.querySelector('.idpop').getBoundingClientRect() : fieldRect(), title: 'Click to look things up',
+  { ch: 'Land & data', needs: 'field', pane: 'layers', layers: () => tourSample().lookup, rect: () => document.querySelector('.idpop') ? document.querySelector('.idpop').getBoundingClientRect() : fieldRect(), title: 'Click to look things up',
     body: () => `<p>With data layers on, click anywhere on the map for what's there: owner, parcel ID and acres, soil, flood zone, wetland type, section.</p>
       <p>${tourSample().lookupNote} A parcel popup also offers <b>Analyse this parcel as a field</b>, which pulls the deed boundary and runs everything above on it.</p>`,
     demo: ['Look up a spot', async () => {
@@ -2941,7 +3181,7 @@ const TOUR = [
     body: `<p>Some tips:</p><ul><li>Drag a KML, GPX or zipped shapefile straight onto the map.</li><li>Esc cancels drawing; Undo removes the last corner.</li>
       <li>Saved fields and pins live in this browser. Use <b>Share</b> or the exports to move them.</li>
       <li>This is a planning tool, not a survey. Check outlets and grades on the ground.</li></ul>
-      <p>Replay any time with <b>? Tour</b> at the top.</p>`,
+      <p>Replay any time with <b>Tour</b> at the bottom of the icon bar.</p>`,
     demo: ['Clear the sample field', () => { if (isDemoField()) clearField(); }] },
 ];
 const CHAPTERS = [...new Set(TOUR.map(s => s.ch))].filter(c => c !== 'Welcome' && c !== 'Finish');
@@ -3004,12 +3244,16 @@ async function goTour(k) {
   if (s.enter) await run('Opening…', s.enter);
   if (seq !== tour.seq) return;
   const el = s.target?.();
+  if (paneOf(el)) setPane(paneOf(el));
+  else if (s.pane) setPane(s.pane);
   if (el && $('side').contains(el)) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 function tourRect() {
   const s = TOUR[tour.i]; if (!s) return null;
   if (s.rect) return s.rect();
-  const el = s.target?.(); if (!el || !el.offsetParent && el.id !== 'flowbar') return null;
+  const el = s.target?.(), p = paneOf(el);
+  if (p && (p !== paneNow || !paneOpen())) setPane(p);              // e.g. a new field opened the Field pane mid-step
+  if (!el || !el.offsetParent && el.id !== 'flowbar') return null;
   const r = el.getBoundingClientRect(); return r.width || r.height ? r : null;
 }
 function placeTour() {
