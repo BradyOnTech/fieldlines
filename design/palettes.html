@@ -1,0 +1,147 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FieldLines palettes</title>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=Source+Serif+4:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  .gal { font-family: var(--font-sans, system-ui, sans-serif); color: var(--foreground, #222); }
+  .concept { margin: 0 0 30px; }
+  .concept h2 { font-size: 18px; margin: 0 0 4px; }
+  .concept .desc { margin: 0 0 8px; font-size: 14px; line-height: 1.5; }
+  .concept .meta { display: flex; gap: 3px; margin-bottom: 10px; }
+  .concept .meta i { width: 22px; height: 22px; border-radius: 4px; box-shadow: inset 0 0 0 1px rgba(127,127,127,.4); }
+  .stage { width: 100%; border-radius: 8px; overflow: hidden; box-shadow: 0 0 0 1px var(--border, #ccc); }
+  .frame { position: relative; box-sizing: border-box; width: 1120px; height: 700px; overflow: hidden; font: 15px/1.5 'Public Sans', sans-serif; background: #8F9A83; }
+  .frame * { box-sizing: border-box; }
+  .frame button { font: inherit; color: inherit; }
+  .mapbox { position: absolute; inset: 0; overflow: hidden; }
+  .mapbox > img { position: absolute; max-width: none; display: block; width: 1590px; top: -325px; left: -9px; }
+
+  .sheet { position: absolute; z-index: 2; left: 16px; top: 16px; bottom: 16px; display: flex; overflow: hidden; border-radius: var(--r, 20px);
+    background: var(--panel); color: var(--ink); box-shadow: 0 12px 34px rgba(10,20,30,.42); }
+  .rail { width: 78px; background: var(--rail); display: flex; flex-direction: column; gap: 4px; padding: 14px 8px; }
+  .rail .mark { display: grid; place-items: center; height: 44px; margin-bottom: 8px; }
+  .rail .mark svg { width: 30px; height: 30px; fill: none; stroke: var(--mark); stroke-width: 2; stroke-linecap: round; }
+  .rail button { height: 62px; border: 0; border-radius: 12px; background: none; color: var(--railInk); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: 600; }
+  .rail button svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+  .rail .on { background: var(--on); color: var(--onInk); }
+  .body { width: 360px; padding: 18px 22px 20px; display: flex; flex-direction: column; }
+  .body > * { flex-shrink: 0; }
+  .top { display: flex; justify-content: space-between; align-items: center; }
+  .top b { font-size: 19px; font-weight: 700; letter-spacing: -.01em; }
+  .top span { width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid var(--line); display: grid; place-items: center; }
+  .top svg { stroke: currentColor; }
+  h3.f { margin: 16px 0 0; font: 600 29px/1.1 'Source Serif 4', serif; letter-spacing: -.01em; }
+  .loc { margin: 3px 0 10px; font: italic 400 15px 'Source Serif 4', serif; color: var(--muted); }
+  .story { margin: 0 0 10px; font-size: 15.5px; line-height: 1.5; }
+  .story b { color: var(--hi, inherit); }
+  .ld { display: flex; align-items: baseline; font-size: 14px; line-height: 1.6; }
+  .ld .d { flex: 1; border-bottom: 1.5px dotted var(--line); margin: 0 6px; transform: translateY(-4px); }
+  .ld b { font-weight: 600; font-variant-numeric: tabular-nums; }
+  h4 { margin: 12px 0 7px; padding-top: 9px; border-top: 1px solid var(--line); font-size: 14px; font-weight: 700; }
+  .bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; margin-bottom: 4px; }
+  .bar div:first-child { width: 53%; background: var(--soilA); } .bar div:last-child { width: 47%; background: var(--soilB); }
+  .su { display: grid; grid-template-columns: 50px 1fr auto; gap: 8px; align-items: center; padding: 2px 0; font-size: 14px; }
+  .su span:first-child { border: 1.5px solid var(--chip); color: var(--chip); border-radius: 4px; text-align: center; font-size: 11px; font-weight: 700; line-height: 17px; }
+  .pills { display: flex; gap: 6px; }
+  .pills span { height: 30px; padding: 0 12px; border-radius: 15px; border: 1.5px solid var(--line); display: inline-flex; align-items: center; font-size: 14px; font-weight: 500; }
+  .pills .on { background: var(--pill); border-color: var(--pill); color: var(--pillInk); }
+  .tg { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 14.5px; }
+  .sw2 { width: 42px; height: 24px; border-radius: 12px; background: var(--toggle); position: relative; }
+  .sw2::after { content: ''; position: absolute; right: 3px; top: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; }
+  .acts { margin-top: auto; padding-top: 12px; display: flex; flex-direction: column; gap: 4px; }
+  .acts .go { height: 46px; border-radius: 23px; border: 0; background: var(--go); color: var(--goInk); font-size: 16px; font-weight: 700; }
+  .acts div { display: flex; justify-content: space-around; font-size: 14.5px; }
+  .acts div span { font-weight: 500; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; padding: 4px 6px 0; }
+  .zm { position: absolute; right: 18px; bottom: 18px; display: flex; flex-direction: column; gap: 8px; }
+  .zm span { width: 44px; height: 44px; border-radius: 50%; background: var(--panel); color: var(--ink); display: grid; place-items: center; font-size: 22px; box-shadow: 0 4px 12px rgba(10,20,30,.35); }
+
+  /* 1. Cyanotype */
+  .t1 { --panel: #1E3F6E; --ink: #F2F6F8; --muted: #A9C1DD; --line: rgba(242,246,248,.3); --rail: #142C50; --railInk: #A9C1DD; --mark: #FF4F9A;
+        --on: #FF4F9A; --onInk: #14213A; --pill: #FF4F9A; --pillInk: #14213A; --toggle: #FF4F9A; --go: #FF4F9A; --goInk: #14213A;
+        --soilA: #8A6644; --soilB: #D2AE7C; --chip: #F2F6F8; --r: 14px; }
+  .t1 .sheet { background-image: linear-gradient(rgba(255,255,255,.055) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.055) 1px, transparent 1px); background-size: 22px 22px; }
+  .t1 .rail { border-right: 1.5px solid rgba(242,246,248,.28); }
+  .t1 h3.f { text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 6px; text-decoration-color: rgba(242,246,248,.4); }
+
+  /* 2. Infrared */
+  .t2 { --panel: #231A24; --ink: #F5ECEF; --muted: #B9A6B2; --line: rgba(245,236,239,.22); --rail: #2F1F2D; --railInk: #C9B4C1; --mark: #57D0D6;
+        --on: #E0294F; --onInk: #FFF4F6; --pill: #E0294F; --pillInk: #FFF4F6; --toggle: #57D0D6; --go: #E0294F; --goInk: #FFF4F6;
+        --soilA: #57D0D6; --soilB: #9EE3E3; --chip: #57D0D6; --r: 18px; }
+  .t2 .rail { background: linear-gradient(180deg, #3A1F33, #1E1622); }
+
+  /* 3. Hypsometric */
+  .t3 { --panel: #FBFBF8; --ink: #1F2A2E; --muted: #5B6A6E; --line: rgba(31,42,46,.22); --rail: #2F6B4F; --railInk: #fff; --mark: #F6E7C8;
+        --on: #FBFBF8; --onInk: #1F2A2E; --pill: #1F6FB2; --pillInk: #fff; --toggle: #1F6FB2; --go: #1F6FB2; --goInk: #fff;
+        --soilA: #7A5638; --soilB: #C99D5E; --chip: #8E5B3B; --r: 18px; }
+  .t3 .rail { padding: 0; gap: 0; }
+  .t3 .rail .mark { height: 72px; margin: 0; background: #6B4430; }
+  .t3 .rail button { height: 76px; border-radius: 0; }
+  .t3 .rail button:nth-of-type(1) { background: #8E5B3B; }
+  .t3 .rail button:nth-of-type(2) { background: #B98552; color: #2A1E14; }
+  .t3 .rail button:nth-of-type(3) { background: #D8BE7A; color: #2A1E14; }
+  .t3 .rail button:nth-of-type(4) { background: #B9C46F; color: #22301B; }
+  .t3 .rail button:nth-of-type(5) { background: #7FA35E; color: #18281A; }
+  .t3 .rail button:nth-of-type(6) { background: #4D8158; }
+  .t3 .rail .on { background: var(--on) !important; color: var(--onInk) !important; margin-right: -1px; box-shadow: inset 4px 0 0 #B9C46F; }
+  .t3 .ld .d { border-bottom-color: #B98552; }
+</style></head>
+<body>
+<div class="gal">
+<section class="concept">
+  <h2>1. Cyanotype and flagging tape</h2>
+  <p class="desc">Blueprint blue with a faint drafting grid and white linework, like a printed field plan. Everything that needs your attention is the fluorescent pink of a survey stake's flagging tape.</p>
+  <div class="meta"><i style="background:#1E3F6E"></i><i style="background:#142C50"></i><i style="background:#F2F6F8"></i><i style="background:#A9C1DD"></i><i style="background:#FF4F9A"></i></div>
+  <div class="stage"><div class="frame t1"></div></div>
+</section>
+<section class="concept">
+  <h2>2. Infrared</h2>
+  <p class="desc">Colours from colour-infrared aerial film, where healthy crops show up red and water and bare soil show up cyan. The panel is a dark plum, actions are infrared red, and water and soil are cyan. It reads well at dusk and on a dim screen.</p>
+  <div class="meta"><i style="background:#231A24"></i><i style="background:#3A1F33"></i><i style="background:#F5ECEF"></i><i style="background:#E0294F"></i><i style="background:#57D0D6"></i></div>
+  <div class="stage"><div class="frame t2"></div></div>
+</section>
+<section class="concept">
+  <h2>3. Elevation tints</h2>
+  <p class="desc">The rail is a map's elevation legend, stepping from bottomland green up to ridge-top brown. The open section turns white and joins the panel like a tab. The panel itself is plain white, with water blue for actions.</p>
+  <div class="meta"><i style="background:#6B4430"></i><i style="background:#B98552"></i><i style="background:#D8BE7A"></i><i style="background:#B9C46F"></i><i style="background:#4D8158"></i><i style="background:#2F6B4F"></i><i style="background:#1F6FB2"></i></div>
+  <div class="stage"><div class="frame t3"></div></div>
+</section>
+</div>
+<template id="tpl">
+  <div class="mapbox"><img src="/Users/bradya/Documents/code/fieldlines/design/map.jpg" alt=""></div>
+  <div class="sheet">
+    <nav class="rail">
+      <div class="mark"><svg viewBox="0 0 30 30"><path d="M4 21c5-6 9 1 14-4s6-5 8-6"/><path d="M4 26c5-5 10 0 15-3s6-4 7-4"/><path d="M4 15c4-6 8 0 12-5s7-5 10-6"/></svg></div>
+      <button><svg viewBox="0 0 24 24"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z M9 3v15 M15 6v15"/></svg>Map</button>
+      <button><svg viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z M3 13l9 5 9-5"/></svg>Layers</button>
+      <button><svg viewBox="0 0 24 24"><path d="M4 18L9 5l8 3 3 10z"/></svg>Draw</button>
+      <button class="on"><svg viewBox="0 0 24 24"><path d="M3 17c4-6 7 2 10-3s5-3 8-7 M3 21h18"/></svg>Field</button>
+      <button><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11a7 7 0 0114 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>Pins</button>
+      <button><svg viewBox="0 0 24 24"><path d="M3 18l5-7 4 4 3-5 6 8z"/></svg>Profile</button>
+    </nav>
+    <div class="body">
+      <div class="top"><b>FieldLines</b><span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke-width="2.4"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg></span></div>
+      <h3 class="f">Ridge-top field</h3>
+      <p class="loc">Viroqua, Vernon County, Wisconsin</p>
+      <p class="story"><b>28.5 acres</b> that fall gently, about <b>2.3%</b>, toward the south-southwest. Rain gathers into one main path draining <b>15.2 acres</b>. No low spots hold 2 inches of water or more.</p>
+      <div class="ld"><span>Lowest point</span><span class="d"></span><b>1,229 ft</b></div>
+      <div class="ld"><span>Highest point</span><span class="d"></span><b>1,269 ft</b></div>
+      <div class="ld"><span>Largest outlet</span><span class="d"></span><b>15.2 ac</b></div>
+      <h4>Soil</h4>
+      <div class="bar"><div></div><div></div></div>
+      <div class="su"><span>114B2</span><span>Mt. Carroll silt loam</span><b>53%</b></div>
+      <div class="su"><span>115C2</span><span>Seaton silt loam</span><b>47%</b></div>
+      <h4>Color the field by</h4>
+      <div class="pills"><span class="on">Elevation</span><span>Cut and fill</span><span>Slope</span></div>
+      <div class="tg"><span>Show where water runs</span><span class="sw2"></span></div>
+      <div class="acts"><button class="go">Watch it rain on this field</button><div><span>Print report</span><span>Save</span><span>Share</span></div></div>
+    </div>
+  </div>
+  <div class="zm"><span>+</span><span>−</span></div>
+</template>
+<script>
+  const tpl = document.getElementById('tpl');
+  document.querySelectorAll('.frame').forEach(f => f.append(tpl.content.cloneNode(true)));
+  const fit = () => document.querySelectorAll('.stage').forEach(s => { s.firstElementChild.style.zoom = s.clientWidth / 1120; });
+  fit(); addEventListener('resize', fit);
+</script>
+</body></html>

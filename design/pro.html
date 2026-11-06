@@ -1,0 +1,155 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FieldLines professional</title>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  .gal { font-family: var(--font-sans, system-ui, sans-serif); color: var(--foreground, #222); }
+  .concept { margin: 0 0 30px; }
+  .concept h2 { font-size: 18px; margin: 0 0 4px; }
+  .concept .desc { margin: 0 0 8px; font-size: 14px; line-height: 1.5; }
+  .concept .meta { display: flex; gap: 3px; margin-bottom: 10px; }
+  .concept .meta i { width: 22px; height: 22px; border-radius: 4px; box-shadow: inset 0 0 0 1px rgba(127,127,127,.4); }
+  .stage { width: 100%; border-radius: 8px; overflow: hidden; box-shadow: 0 0 0 1px var(--border, #ccc); }
+  .frame { position: relative; box-sizing: border-box; width: 1120px; height: 700px; overflow: hidden; font: 14px/1.45 'Public Sans', sans-serif; background: #8F9A83; font-variant-numeric: tabular-nums; }
+  .frame * { box-sizing: border-box; }
+  .frame button { font: inherit; color: inherit; }
+  .mapbox { position: absolute; inset: 0; overflow: hidden; }
+  .mapbox > img { position: absolute; max-width: none; display: block; width: 1590px; top: -325px; left: -30px; }
+
+  .sheet { position: absolute; z-index: 2; left: 12px; top: 12px; bottom: 12px; display: flex; overflow: hidden; border-radius: 10px;
+    background: var(--panel); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.2), 0 8px 24px rgba(0,0,0,.22); }
+  .rail { width: 64px; background: var(--rail); border-right: 1px solid var(--railLine); display: flex; flex-direction: column; gap: 2px; padding: 10px 0; }
+  .rail .mark { display: grid; place-items: center; height: 40px; margin-bottom: 10px; }
+  .rail .mark span { width: 32px; height: 32px; border-radius: 7px; background: var(--accent); display: grid; place-items: center; }
+  .rail .mark svg { width: 20px; height: 20px; fill: none; stroke: var(--accentInk); stroke-width: 2.2; stroke-linecap: round; }
+  .rail button { position: relative; height: 56px; border: 0; background: none; color: var(--railInk); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 10.5px; font-weight: 600; }
+  .rail button svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .rail .on { color: var(--railOn); background: var(--railOnBg); }
+  .rail .on::before { content: ''; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 0 3px 3px 0; background: var(--accent); }
+  .rail .sp { flex: 1; }
+  .rail .me { width: 30px; height: 30px; border-radius: 50%; margin: 0 auto 4px; background: var(--railOnBg); color: var(--railOn); display: grid; place-items: center; font-size: 11px; font-weight: 700; }
+
+  .body { width: 372px; display: flex; flex-direction: column; }
+  .body > * { flex-shrink: 0; }
+  .hd { padding: 14px 18px 12px; border-bottom: 1px solid var(--line); }
+  .crumb { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; }
+  .hd h3 { margin: 4px 0 0; font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
+  .hd p { margin: 1px 0 0; font-size: 13px; color: var(--muted); }
+  .sec { padding: 12px 18px; border-bottom: 1px solid var(--line); }
+  .sec h4 { margin: 0 0 8px; font-size: 12.5px; font-weight: 600; color: var(--muted); display: flex; justify-content: space-between; }
+  .sec h4 a { color: var(--link); font-weight: 600; text-decoration: none; }
+  .sum { margin: 0 0 10px; font-size: 13.5px; }
+  .kpi { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .kpi div { padding: 7px 10px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .kpi div:nth-child(3n) { border-right: 0; } .kpi div:nth-child(n+4) { border-bottom: 0; }
+  .kpi span { display: block; font-size: 11.5px; color: var(--muted); }
+  .kpi b { font-size: 17px; font-weight: 600; letter-spacing: -.01em; }
+  .kpi b small { font-size: 12px; font-weight: 500; color: var(--muted); margin-left: 2px; }
+  .seg { display: grid; grid-template-columns: repeat(4, 1fr); padding: 2px; border-radius: 7px; background: var(--segBg); }
+  .seg span { height: 28px; display: grid; place-items: center; border-radius: 5px; font-size: 13px; font-weight: 500; color: var(--muted); }
+  .seg .on { background: var(--segOn); color: var(--segOnInk); box-shadow: 0 1px 2px rgba(0,0,0,.15); font-weight: 600; }
+  .ramp { height: 8px; border-radius: 4px; margin: 10px 0 3px; background: linear-gradient(90deg,#2b83ba,#abdda4,#ffffbf,#fdae61,#d7191c); }
+  .rl { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--muted); }
+  .row { display: flex; justify-content: space-between; align-items: center; height: 34px; }
+  .row + .row { border-top: 1px solid var(--line2); }
+  .sw2 { width: 34px; height: 20px; border-radius: 10px; background: var(--accent); position: relative; }
+  .sw2::after { content: ''; position: absolute; right: 2px; top: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.3); }
+  .sw2.off { background: var(--segBg); } .sw2.off::after { right: auto; left: 2px; }
+  .sel { height: 26px; padding: 0 8px; border: 1px solid var(--line); border-radius: 6px; font-size: 12.5px; display: flex; align-items: center; gap: 6px; }
+  .soil { display: grid; grid-template-columns: 46px 1fr auto; gap: 10px; align-items: center; padding: 4px 0; }
+  .soil code { font: 600 11px 'Public Sans', sans-serif; text-align: center; padding: 2px 0; border-radius: 4px; background: var(--segBg); }
+  .soil div { line-height: 1.3; } .soil small { display: block; font-size: 12px; color: var(--muted); }
+  .soil b { font-weight: 600; }
+  .ft { margin-top: auto; padding: 12px 18px 14px; border-top: 1px solid var(--line); display: grid; grid-template-columns: 1fr auto auto auto; gap: 6px; }
+  .ft button { height: 36px; border-radius: 7px; border: 1px solid var(--line); background: var(--panel); padding: 0 11px; font-size: 13px; font-weight: 600; }
+  .ft .go { background: var(--go); color: var(--goInk); border-color: var(--go); }
+  .zm { position: absolute; right: 12px; top: 12px; display: flex; flex-direction: column; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,.2), 0 4px 12px rgba(0,0,0,.2); }
+  .zm span { width: 36px; height: 36px; background: var(--panel); color: var(--ink); display: grid; place-items: center; font-size: 18px; }
+  .zm span + span { border-top: 1px solid var(--line); }
+  .scale { position: absolute; right: 12px; bottom: 12px; background: var(--panel); color: var(--ink); border-radius: 6px; padding: 4px 9px; font-size: 11.5px; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+
+  .p1 { --panel: #FFFFFF; --ink: #16202A; --muted: #5E6A75; --line: #E2E6EA; --line2: #EEF1F3; --rail: #F5F7F9; --railLine: #E2E6EA; --railInk: #5E6A75;
+        --railOn: #1D5FBF; --railOnBg: #E8F0FB; --accent: #1D5FBF; --accentInk: #fff; --segBg: #EEF1F4; --segOn: #FFFFFF; --segOnInk: #16202A; --link: #1D5FBF; --go: #1D5FBF; --goInk: #fff; }
+  .p2 { --panel: #FFFFFF; --ink: #17212B; --muted: #5C6873; --line: #E1E5E8; --line2: #EDF0F2; --rail: #1B2A35; --railLine: #1B2A35; --railInk: #9AABB9;
+        --railOn: #FFFFFF; --railOnBg: rgba(255,255,255,.09); --accent: #23874F; --accentInk: #fff; --segBg: #EEF1F3; --segOn: #23874F; --segOnInk: #fff; --link: #1E7446; --go: #23874F; --goInk: #fff; }
+  .p3 { --panel: #1F2329; --ink: #E8EBEE; --muted: #98A2AD; --line: #30363E; --line2: #2A2F36; --rail: #191C21; --railLine: #2A2F36; --railInk: #8C96A1;
+        --railOn: #FFFFFF; --railOnBg: #2A3038; --accent: #4AA3E8; --accentInk: #0F1720; --segBg: #2A2F36; --segOn: #3B424C; --segOnInk: #fff; --link: #6CB6F0; --go: #F1F3F5; --goInk: #14181D; }
+</style></head>
+<body>
+<div class="gal">
+<section class="concept">
+  <h2>1. Light</h2>
+  <p class="desc">White panel, a light grey rail and one deep blue for everything you can act on. The quietest and most conventional of the three, in the vein of mapping software used in an office.</p>
+  <div class="meta"><i style="background:#FFFFFF"></i><i style="background:#F5F7F9"></i><i style="background:#E2E6EA"></i><i style="background:#16202A"></i><i style="background:#1D5FBF"></i></div>
+  <div class="stage"><div class="frame p1"></div></div>
+</section>
+<section class="concept">
+  <h2>2. Slate and field green</h2>
+  <p class="desc">A dark slate rail anchors the brand, the working panel stays white, and a single field green marks actions and selections. It reads as an ag-tech product rather than a generic map tool.</p>
+  <div class="meta"><i style="background:#1B2A35"></i><i style="background:#FFFFFF"></i><i style="background:#E1E5E8"></i><i style="background:#17212B"></i><i style="background:#23874F"></i></div>
+  <div class="stage"><div class="frame p2"></div></div>
+</section>
+<section class="concept">
+  <h2>3. Dark</h2>
+  <p class="desc">Graphite throughout, so the imagery and overlays carry the colour. The main action is a white button, and water blue is used for toggles. This is the usual look for GIS and drone-mapping tools.</p>
+  <div class="meta"><i style="background:#191C21"></i><i style="background:#1F2329"></i><i style="background:#30363E"></i><i style="background:#E8EBEE"></i><i style="background:#4AA3E8"></i></div>
+  <div class="stage"><div class="frame p3"></div></div>
+</section>
+</div>
+<template id="tpl">
+  <div class="mapbox"><img src="/Users/bradya/Documents/code/fieldlines/design/map.jpg" alt=""></div>
+  <div class="sheet">
+    <nav class="rail">
+      <div class="mark"><span><svg viewBox="0 0 24 24"><path d="M3 15c4-5 7 1 11-3s5-4 7-5"/><path d="M3 20c4-4 8 0 12-2.5s5-3 6-3"/></svg></span></div>
+      <button><svg viewBox="0 0 24 24"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z M9 3v15 M15 6v15"/></svg>Map</button>
+      <button><svg viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z M3 13l9 5 9-5"/></svg>Layers</button>
+      <button><svg viewBox="0 0 24 24"><path d="M4 18L9 5l8 3 3 10z"/></svg>Draw</button>
+      <button class="on"><svg viewBox="0 0 24 24"><path d="M3 17c4-6 7 2 10-3s5-3 8-7 M3 21h18"/></svg>Field</button>
+      <button><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11a7 7 0 0114 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>Pins</button>
+      <button><svg viewBox="0 0 24 24"><path d="M3 18l5-7 4 4 3-5 6 8z"/></svg>Profile</button>
+      <span class="sp"></span>
+      <button><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 114 2c-1 .6-1.5 1.2-1.5 2.5M12 17h.01"/></svg>Tour</button>
+    </nav>
+    <div class="body">
+      <div class="hd">
+        <div class="crumb"><span>Fields</span><span>Lidar 2020, QL2</span></div>
+        <h3>Ridge-top field</h3>
+        <p>Viroqua, Vernon County, Wisconsin</p>
+      </div>
+      <div class="sec">
+        <p class="sum">Falls 2.3% to the south-southwest. One main outlet drains 15.2 ac, and nothing ponds 2 in or more.</p>
+        <div class="kpi">
+          <div><span>Area</span><b>28.5<small>ac</small></b></div>
+          <div><span>Slope</span><b>2.27<small>%</small></b></div>
+          <div><span>Falls toward</span><b>208°<small>SSW</small></b></div>
+          <div><span>Relief</span><b>40.3<small>ft</small></b></div>
+          <div><span>Largest outlet</span><b>15.2<small>ac</small></b></div>
+          <div><span>Ponding</span><b>0.0<small>ac</small></b></div>
+        </div>
+      </div>
+      <div class="sec">
+        <h4>Map display</h4>
+        <div class="seg"><span class="on">Elevation</span><span>Cut/fill</span><span>Slope</span><span>Off</span></div>
+        <div class="ramp"></div>
+        <div class="rl"><span>1,229 ft</span><span>1,269 ft</span></div>
+        <div class="row" style="margin-top:6px"><span>Drainage paths</span><span class="sw2"></span></div>
+        <div class="row"><span>Contours</span><span class="sel">1 ft <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 4l3 3 3-3"/></svg></span></div>
+      </div>
+      <div class="sec" style="border-bottom:0">
+        <h4>Soils <a>SSURGO</a></h4>
+        <div class="soil"><code>114B2</code><div>Mt. Carroll silt loam<small>Well drained, 2 to 6% slopes</small></div><b>53%</b></div>
+        <div class="soil"><code>115C2</code><div>Seaton silt loam<small>Well drained, 6 to 12% slopes</small></div><b>47%</b></div>
+      </div>
+      <div class="ft"><button class="go">Run 3D rain</button><button>Report</button><button>Save</button><button>Share</button></div>
+    </div>
+  </div>
+  <div class="zm"><span>+</span><span>−</span></div>
+  <div class="scale">500 ft</div>
+</template>
+<script>
+  const tpl = document.getElementById('tpl');
+  document.querySelectorAll('.frame').forEach(f => f.append(tpl.content.cloneNode(true)));
+  const fit = () => document.querySelectorAll('.stage').forEach(s => { s.firstElementChild.style.zoom = s.clientWidth / 1120; });
+  fit(); addEventListener('resize', fit);
+</script>
+</body></html>

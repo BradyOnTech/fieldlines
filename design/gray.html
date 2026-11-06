@@ -1,0 +1,139 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FieldLines gray</title>
+<style>
+  .gal { font-family: var(--font-sans, system-ui, sans-serif); color: var(--foreground, #222); }
+  .concept { margin: 0 0 30px; }
+  .concept h2 { font-size: 18px; margin: 0 0 4px; }
+  .concept .desc { margin: 0 0 8px; font-size: 14px; line-height: 1.5; }
+  .concept .meta { display: flex; gap: 3px; margin-bottom: 10px; }
+  .concept .meta i { width: 22px; height: 22px; border-radius: 4px; box-shadow: inset 0 0 0 1px rgba(127,127,127,.4); }
+  .stage { width: 100%; border-radius: 8px; overflow: hidden; box-shadow: 0 0 0 1px var(--border, #ccc); }
+  .frame { position: relative; box-sizing: border-box; width: 1120px; height: 700px; overflow: hidden; background: #8F9A83; color: #1D1D1F;
+    font: 13.5px/1.4 -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased; }
+  .frame * { box-sizing: border-box; }
+  .frame button { font: inherit; color: inherit; }
+  .mapbox { position: absolute; inset: 0; overflow: hidden; }
+  .mapbox > img { position: absolute; max-width: none; display: block; width: 1590px; top: -325px; left: -30px; }
+
+  .sheet { position: absolute; z-index: 2; left: 10px; top: 10px; bottom: 10px; display: flex; overflow: hidden; border-radius: 12px;
+    background: var(--panel); box-shadow: 0 0 0 .5px rgba(0,0,0,.18), 0 10px 30px rgba(0,0,0,.25); }
+  .rail { width: 64px; background: var(--rail); border-right: .5px solid rgba(60,60,67,.18); display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 12px 0 10px; }
+  .rail .mark { width: 34px; height: 34px; border-radius: 8px; margin-bottom: 12px; display: grid; place-items: center; background: linear-gradient(180deg, #3D93FF, #0A6BFF); box-shadow: inset 0 0 0 .5px rgba(0,0,0,.15); }
+  .rail .mark svg { width: 20px; height: 20px; fill: none; stroke: #fff; stroke-width: 2.2; stroke-linecap: round; }
+  .rail button { width: 54px; height: 52px; border: 0; border-radius: 9px; background: none; color: #6E6E73; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 10.5px; font-weight: 500; }
+  .rail button svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  .rail .on { background: rgba(0,122,255,.13); color: #007AFF; font-weight: 600; }
+  .rail .sp { flex: 1; }
+
+  .body { width: 372px; display: flex; flex-direction: column; padding: 16px 14px 14px; }
+  .body > * { flex-shrink: 0; }
+  .hd { padding: 0 4px; display: flex; justify-content: space-between; align-items: flex-start; }
+  .hd h3 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
+  .hd p { margin: 1px 0 0; font-size: 13px; color: #6E6E73; }
+  .hd .more { width: 28px; height: 28px; border-radius: 50%; background: rgba(118,118,128,.12); display: grid; place-items: center; color: #007AFF; font-weight: 700; letter-spacing: 1px; }
+  .sum { margin: 8px 4px 12px; font-size: 13px; color: #3C3C43; }
+  .cap { margin: 12px 4px 5px; font-size: 12.5px; font-weight: 600; color: #6E6E73; display: flex; justify-content: space-between; }
+  .cap a { color: #007AFF; font-weight: 500; }
+  .grp { background: var(--grp); border-radius: 10px; box-shadow: var(--grpEdge); }
+  .kpi { display: grid; grid-template-columns: repeat(3, 1fr); }
+  .kpi div { padding: 8px 12px 9px; position: relative; }
+  .kpi div:nth-child(-n+3)::after { content: ''; position: absolute; left: 12px; right: 0; bottom: 0; height: .5px; background: rgba(60,60,67,.2); }
+  .kpi span { display: block; font-size: 11.5px; color: #6E6E73; }
+  .kpi b { font-size: 17px; font-weight: 600; letter-spacing: -.01em; }
+  .kpi b small { font-size: 12px; font-weight: 400; color: #6E6E73; margin-left: 2px; }
+  .pad { padding: 10px 12px 4px; }
+  .seg { display: grid; grid-template-columns: repeat(4, 1fr); padding: 2px; border-radius: 8px; background: rgba(118,118,128,.12); }
+  .seg span { height: 26px; display: grid; place-items: center; border-radius: 6px; font-size: 12.5px; font-weight: 500; }
+  .seg .on { background: #fff; box-shadow: 0 0 0 .5px rgba(0,0,0,.04), 0 3px 8px rgba(0,0,0,.12), 0 3px 1px rgba(0,0,0,.04); font-weight: 600; }
+  .ramp { height: 6px; border-radius: 3px; margin: 10px 0 3px; background: linear-gradient(90deg,#2b83ba,#abdda4,#ffffbf,#fdae61,#d7191c); }
+  .rl { display: flex; justify-content: space-between; font-size: 11px; color: #6E6E73; }
+  .row { position: relative; display: flex; justify-content: space-between; align-items: center; min-height: 40px; padding: 0 12px; }
+  .row + .row::before, .pad + .row::before { content: ''; position: absolute; left: 12px; right: 0; top: 0; height: .5px; background: rgba(60,60,67,.2); }
+  .row .v { color: #6E6E73; display: flex; align-items: center; gap: 6px; }
+  .sw2 { width: 38px; height: 22px; border-radius: 11px; background: #007AFF; position: relative; }
+  .sw2::after { content: ''; position: absolute; right: 2px; top: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,.2); }
+  .soil { padding: 7px 12px; }
+  .soil .nm { display: flex; justify-content: space-between; }
+  .soil small { display: block; font-size: 12px; color: #6E6E73; }
+  .soil code { font: 600 10.5px -apple-system, system-ui, sans-serif; color: #6E6E73; background: rgba(118,118,128,.12); border-radius: 4px; padding: 1px 5px; margin-right: 6px; }
+  .ft { margin-top: auto; display: grid; grid-template-columns: 1fr auto auto auto; gap: 6px; padding-top: 12px; }
+  .ft button { height: 34px; border-radius: 8px; border: 0; background: rgba(118,118,128,.14); color: #007AFF; padding: 0 12px; font-size: 13px; font-weight: 600; }
+  .ft .go { background: #007AFF; color: #fff; }
+  .zm { position: absolute; right: 12px; top: 12px; display: flex; flex-direction: column; border-radius: 9px; overflow: hidden; background: rgba(246,246,248,.82); backdrop-filter: blur(20px) saturate(1.8); -webkit-backdrop-filter: blur(20px) saturate(1.8); box-shadow: 0 0 0 .5px rgba(0,0,0,.15), 0 4px 14px rgba(0,0,0,.18); }
+  .zm span { width: 36px; height: 36px; display: grid; place-items: center; font-size: 19px; color: #3C3C43; }
+  .zm span + span { border-top: .5px solid rgba(60,60,67,.25); }
+  .scale { position: absolute; right: 12px; bottom: 12px; background: rgba(246,246,248,.82); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-radius: 7px; padding: 4px 9px; font-size: 11px; color: #3C3C43; box-shadow: 0 0 0 .5px rgba(0,0,0,.15); }
+
+  .g1 { --panel: #F2F2F7; --rail: #E9E9EE; --grp: #FFFFFF; --grpEdge: 0 0 0 .5px rgba(0,0,0,.04); }
+  .g2 { --panel: rgba(236,236,240,.74); --rail: rgba(222,222,228,.55); --grp: rgba(255,255,255,.72); --grpEdge: 0 0 0 .5px rgba(0,0,0,.06); }
+  .g2 .sheet { backdrop-filter: blur(28px) saturate(1.7); -webkit-backdrop-filter: blur(28px) saturate(1.7); }
+</style></head>
+<body>
+<div class="gal">
+<section class="concept">
+  <h2>1a. System grey</h2>
+  <p class="desc">Built from Apple's grey ramp and the grouped-list layout of the Settings app. A light grey panel holds white rounded groups with hairline separators, and system blue marks anything you can tap. The fonts are Apple's system fonts (San Francisco on a Mac or iPhone).</p>
+  <div class="meta"><i style="background:#F2F2F7"></i><i style="background:#E9E9EE"></i><i style="background:#FFFFFF"></i><i style="background:#6E6E73"></i><i style="background:#1D1D1F"></i><i style="background:#007AFF"></i></div>
+  <div class="stage"><div class="frame g1"></div></div>
+</section>
+<section class="concept">
+  <h2>1b. Frosted grey</h2>
+  <p class="desc">The same panel as frosted glass, like the macOS sidebar or Apple Maps cards. The imagery shows through faintly, which keeps the map feeling like one surface.</p>
+  <div class="meta"><i style="background:#ECECF0"></i><i style="background:#DEDEE4"></i><i style="background:#FFFFFF"></i><i style="background:#6E6E73"></i><i style="background:#1D1D1F"></i><i style="background:#007AFF"></i></div>
+  <div class="stage"><div class="frame g2"></div></div>
+</section>
+</div>
+<template id="tpl">
+  <div class="mapbox"><img src="/Users/bradya/Documents/code/fieldlines/design/map.jpg" alt=""></div>
+  <div class="sheet">
+    <nav class="rail">
+      <div class="mark"><svg viewBox="0 0 24 24"><path d="M3 15c4-5 7 1 11-3s5-4 7-5"/><path d="M3 20c4-4 8 0 12-2.5s5-3 6-3"/></svg></div>
+      <button><svg viewBox="0 0 24 24"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z M9 3v15 M15 6v15"/></svg>Map</button>
+      <button><svg viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z M3 13l9 5 9-5"/></svg>Layers</button>
+      <button><svg viewBox="0 0 24 24"><path d="M4 18L9 5l8 3 3 10z"/></svg>Draw</button>
+      <button class="on"><svg viewBox="0 0 24 24"><path d="M3 17c4-6 7 2 10-3s5-3 8-7 M3 21h18"/></svg>Field</button>
+      <button><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11a7 7 0 0114 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>Pins</button>
+      <button><svg viewBox="0 0 24 24"><path d="M3 18l5-7 4 4 3-5 6 8z"/></svg>Profile</button>
+      <span class="sp"></span>
+      <button><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 114 2c-1 .6-1.5 1.2-1.5 2.5M12 17h.01"/></svg>Tour</button>
+    </nav>
+    <div class="body">
+      <div class="hd"><div><h3>Ridge-top field</h3><p>Viroqua, Vernon County, Wisconsin</p></div><span class="more">···</span></div>
+      <p class="sum">Falls 2.3% to the south-southwest. One main outlet drains 15.2 ac, and nothing ponds 2 in or more.</p>
+      <div class="grp kpi">
+        <div><span>Area</span><b>28.5<small>ac</small></b></div>
+        <div><span>Slope</span><b>2.27<small>%</small></b></div>
+        <div><span>Falls toward</span><b>208°<small>SSW</small></b></div>
+        <div><span>Relief</span><b>40.3<small>ft</small></b></div>
+        <div><span>Largest outlet</span><b>15.2<small>ac</small></b></div>
+        <div><span>Ponding</span><b>0.0<small>ac</small></b></div>
+      </div>
+      <div class="cap">Map display</div>
+      <div class="grp">
+        <div class="pad">
+          <div class="seg"><span class="on">Elevation</span><span>Cut/fill</span><span>Slope</span><span>Off</span></div>
+          <div class="ramp"></div>
+          <div class="rl"><span>1,229 ft</span><span>1,269 ft</span></div>
+        </div>
+        <div class="row"><span>Drainage paths</span><span class="sw2"></span></div>
+        <div class="row"><span>Contours</span><span class="v">1 ft <svg width="8" height="12" viewBox="0 0 8 12" fill="none" stroke="#C4C4C7" stroke-width="2"><path d="M2 2l4 4-4 4"/></svg></span></div>
+      </div>
+      <div class="cap">Soils <a>SSURGO</a></div>
+      <div class="grp">
+        <div class="row soil"><div style="flex:1"><div class="nm"><span><code>114B2</code>Mt. Carroll silt loam</span><b>53%</b></div><small>Well drained, 2 to 6% slopes</small></div></div>
+        <div class="row soil"><div style="flex:1"><div class="nm"><span><code>115C2</code>Seaton silt loam</span><b>47%</b></div><small>Well drained, 6 to 12% slopes</small></div></div>
+      </div>
+      <div class="ft"><button class="go">Run 3D rain</button><button>Report</button><button>Save</button><button>Share</button></div>
+    </div>
+  </div>
+  <div class="zm"><span>+</span><span>−</span></div>
+  <div class="scale">500 ft</div>
+</template>
+<script>
+  const tpl = document.getElementById('tpl');
+  document.querySelectorAll('.frame').forEach(f => f.append(tpl.content.cloneNode(true)));
+  const fit = () => document.querySelectorAll('.stage').forEach(s => { s.firstElementChild.style.zoom = s.clientWidth / 1120; });
+  fit(); addEventListener('resize', fit);
+</script>
+</body></html>

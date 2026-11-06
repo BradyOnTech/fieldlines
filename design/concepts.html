@@ -1,0 +1,318 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FieldLines design directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@400;500;600&family=Public+Sans:wght@400;600;700&family=Source+Serif+4:ital,wght@0,600;1,400&family=Barlow:wght@500;600&family=Barlow+Condensed:wght@500;600;700&family=Alegreya:wght@500;700&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  .gal { max-width: 1120px; margin: 0 auto; font-family: var(--font-sans, system-ui, sans-serif); color: var(--foreground, #222); }
+  .gal > p { margin: 0 0 20px; max-width: 70ch; color: var(--muted-foreground, #555); font-size: 14px; line-height: 1.5; }
+  .concept { margin: 0 0 36px; }
+  .concept h2 { font-size: 18px; margin: 0 0 4px; }
+  .concept .desc { margin: 0 0 8px; max-width: 72ch; font-size: 14px; line-height: 1.5; }
+  .concept .meta { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 12.5px; color: var(--muted-foreground, #666); margin-bottom: 10px; }
+  .sw { display: inline-flex; gap: 3px; }
+  .sw i { width: 18px; height: 18px; border-radius: 4px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.15); }
+  .stage { width: 100%; border-radius: 8px; overflow: hidden; box-shadow: 0 0 0 1px rgba(0,0,0,.12); }
+  .frame { position: relative; box-sizing: border-box; width: 1120px; height: 700px; overflow: hidden; }
+  .frame * { box-sizing: border-box; }
+  .frame button, .frame input { font: inherit; color: inherit; }
+  .mapbox { position: relative; overflow: hidden; }
+  .mapbox > img { position: absolute; max-width: none; display: block; }
+
+  /* A. Field book */
+  .fA { display: grid; grid-template-columns: 340px 1fr; font: 15px/26px 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif; color: #2E3430; }
+  .fA .book { position: relative; z-index: 2; background-color: #E8EBC8; background-image: linear-gradient(to bottom, transparent 25px, #C9D0AF 25px); background-size: 100% 26px;
+    padding: 13px 20px 0 48px; border-right: 2px solid #2E3430; font-variant-numeric: tabular-nums; }
+  .fA .book::before { content: ''; position: absolute; left: 36px; top: 0; bottom: 0; width: 1.5px; background: #C0463A; }
+  .fA .brand { display: flex; justify-content: space-between; }
+  .fA .brand b { font-size: 18px; font-weight: 600; }
+  .fA .brand span { color: #646C63; }
+  .fA .search { display: block; width: 100%; height: 26px; border: 0; border-bottom: 1.5px solid #2E3430; background: transparent; padding: 0; margin-top: 26px; outline: 0; }
+  .fA .search::placeholder { color: #7B8377; }
+  .fA h3.f { font-size: 25px; line-height: 52px; font-weight: 600; margin: 26px 0 0; }
+  .fA .where { margin: 0; color: #646C63; }
+  .fA dl { display: grid; grid-template-columns: 1fr auto; margin: 0; }
+  .fA dt { color: #646C63; } .fA dd { margin: 0; font-weight: 600; text-align: right; }
+  .fA h4 { margin: 26px 0 0; font-size: 15px; font-weight: 600; color: #2F5D8C; }
+  .fA .soil { display: grid; grid-template-columns: 44px 1fr; }
+  .fA .soil b { color: #B23A2E; font-weight: 600; }
+  .fA .cks { display: grid; grid-template-columns: 1fr 1fr; }
+  .fA .ck { display: flex; align-items: center; gap: 9px; }
+  .fA .ck i { width: 15px; height: 15px; border: 1.5px solid #2E3430; display: grid; place-items: center; font: 600 15px/1 sans-serif; font-style: normal; color: #B23A2E; }
+  .fA .ck.on i::after { content: '\2715'; }
+  .fA .acts { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 8px; margin-top: 22px; }
+  .fA .acts button { height: 34px; padding: 0 12px; border: 1.5px solid #2E3430; background: rgba(255,255,255,.25); border-radius: 2px; font-weight: 500; }
+  .fA .acts .ink { background: #2E3430; color: #E8EBC8; }
+  .fA .tabs { position: absolute; left: 340px; top: 64px; z-index: 3; display: flex; flex-direction: column; gap: 4px; }
+  .fA .tabs span { writing-mode: vertical-rl; padding: 13px 5px; font-size: 14px; font-weight: 500; border: 2px solid #2E3430; border-left: 0; border-radius: 0 8px 8px 0; background: var(--t); }
+  .fA .tabs .on { background: #E8EBC8; margin-left: -2px; padding-left: 7px; font-weight: 600; }
+  .fA .mapbox > img { left: -272px; top: -212px; width: 1325px; }
+
+  /* B. Survey map */
+  .fB { display: grid; grid-template-columns: 1fr 330px; padding: 20px; background: #FFFFFF; font: 13.5px/1.45 'Public Sans', sans-serif; color: #1E1E1E; }
+  .fB .quad { position: relative; border: 2.5px solid #1E1E1E; outline: 1px solid #1E1E1E; outline-offset: 4px; margin: 5px; }
+  .fB .quad::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(90deg, #1E1E1E 0 1.5px, transparent 1.5px 92px) top / 100% 9px no-repeat,
+                repeating-linear-gradient(90deg, #1E1E1E 0 1.5px, transparent 1.5px 92px) bottom / 100% 9px no-repeat,
+                repeating-linear-gradient(0deg, #1E1E1E 0 1.5px, transparent 1.5px 92px) left / 9px 100% no-repeat,
+                repeating-linear-gradient(0deg, #1E1E1E 0 1.5px, transparent 1.5px 92px) right / 9px 100% no-repeat; }
+  .fB .mapbox { position: absolute; inset: 0; }
+  .fB .mapbox > img { left: -290px; top: -237px; width: 1325px; filter: saturate(.75) contrast(1.05); }
+  .fB .tk { position: absolute; z-index: 2; background: #fff; font-size: 10.5px; padding: 0 5px; line-height: 16px; }
+  .fB .stamp { position: absolute; z-index: 2; left: 16px; bottom: 16px; background: rgba(255,255,255,.9); padding: 6px 9px; font-size: 11.5px; line-height: 1.35; }
+  .fB .stamp i { font-family: 'Source Serif 4', serif; color: #2F6FA8; }
+  .fB .collar { padding: 4px 0 4px 26px; display: flex; flex-direction: column; min-height: 0; }
+  .fB h1 { margin: 0; font-size: 25px; font-weight: 700; letter-spacing: -.01em; line-height: 1.1; }
+  .fB .tag { margin: 2px 0 10px; font: italic 400 14px 'Source Serif 4', serif; color: #555; }
+  .fB nav { display: flex; gap: 14px; border-bottom: 1.5px solid #1E1E1E; padding-bottom: 6px; }
+  .fB nav span { padding-bottom: 6px; margin-bottom: -7.5px; }
+  .fB nav .on { font-weight: 700; border-bottom: 3px solid #A0602F; }
+  .fB h3.f { margin: 16px 0 0; font: 600 19px/1.2 'Source Serif 4', serif; }
+  .fB .loc { margin: 1px 0 10px; font: italic 400 13.5px 'Source Serif 4', serif; color: #555; }
+  .fB .split { display: grid; grid-template-columns: 1fr 92px; gap: 14px; align-items: center; }
+  .fB .ld { display: flex; align-items: baseline; }
+  .fB .ld .d { flex: 1; border-bottom: 1.5px dotted #9A9A9A; margin: 0 5px; transform: translateY(-4px); }
+  .fB .ld b { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .fB .rose { text-align: center; font-size: 11px; line-height: 1.25; }
+  .fB h4 { margin: 14px 0 4px; font-size: 13.5px; font-weight: 700; padding-top: 8px; border-top: 1.5px solid #1E1E1E; }
+  .fB .lg { display: grid; grid-template-columns: 36px 1fr auto; gap: 10px; align-items: center; padding: 3px 0; }
+  .fB .lg .s { height: 14px; border: 1px solid #1E1E1E; }
+  .fB .lg.off { color: #8A8A8A; } .fB .lg.off .s { opacity: .3; }
+  .fB .lg small { font-size: 11.5px; color: #777; }
+  .fB .su { display: grid; grid-template-columns: 52px 1fr auto; gap: 8px; align-items: center; padding: 2px 0; }
+  .fB .su span:first-child { border: 1px solid #1E1E1E; text-align: center; font-size: 11px; font-weight: 600; }
+  .fB .acts { margin-top: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .fB .acts button { height: 32px; border: 1.5px solid #1E1E1E; background: #fff; border-radius: 0; }
+  .fB .acts .k { grid-column: 1 / -1; background: #1E1E1E; color: #fff; height: 36px; font-weight: 600; }
+
+  /* C. Cab display */
+  .fC { display: grid; grid-template-columns: 80px 360px 1fr; font: 16px/1.3 'Barlow', sans-serif; color: #17212B; }
+  .fC .rail { background: #17212B; display: flex; flex-direction: column; padding: 8px 0; gap: 2px; }
+  .fC .rail button { height: 74px; border: 0; background: none; color: #AEB8C2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; font: 600 14px 'Barlow Condensed', sans-serif; }
+  .fC .rail svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .fC .rail .on { background: #FFC72C; color: #17212B; }
+  .fC .panel { background: #EEF0EC; padding: 16px 18px; display: flex; flex-direction: column; border-right: 2px solid #17212B; }
+  .fC h3.f { margin: 0; font: 700 30px/1 'Barlow Condensed', sans-serif; }
+  .fC .loc { margin: 4px 0 14px; color: #55606B; font-size: 15px; }
+  .fC .ro { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; background: #C3CACF; border: 2px solid #C3CACF; border-radius: 8px; overflow: hidden; }
+  .fC .ro div { background: #fff; padding: 8px 10px 9px; }
+  .fC .ro b { display: block; font: 600 30px/1 'Barlow Condensed', sans-serif; font-variant-numeric: tabular-nums; }
+  .fC .ro b small { font-size: 16px; font-weight: 500; margin-left: 2px; }
+  .fC .ro span { font-size: 13px; color: #55606B; font-weight: 500; }
+  .fC .lbl { margin: 14px 0 6px; font: 600 15px 'Barlow Condensed', sans-serif; color: #55606B; }
+  .fC .seg { display: grid; grid-template-columns: repeat(4, 1fr); border: 2px solid #17212B; border-radius: 8px; overflow: hidden; }
+  .fC .seg button { height: 48px; border: 0; border-right: 2px solid #17212B; background: #fff; font: 600 17px 'Barlow Condensed', sans-serif; }
+  .fC .seg button:last-child { border-right: 0; } .fC .seg .on { background: #FFC72C; }
+  .fC .tg { display: flex; align-items: center; justify-content: space-between; height: 54px; background: #fff; border: 2px solid #C3CACF; border-radius: 8px; padding: 0 12px 0 14px; margin-top: 8px; font-weight: 600; }
+  .fC .sw2 { width: 54px; height: 32px; border-radius: 16px; background: #2E7D32; position: relative; }
+  .fC .sw2::after { content: ''; position: absolute; right: 3px; top: 3px; width: 26px; height: 26px; border-radius: 50%; background: #fff; }
+  .fC .step { display: flex; align-items: center; gap: 6px; font: 600 18px 'Barlow Condensed', sans-serif; }
+  .fC .step button { width: 40px; height: 38px; border: 2px solid #17212B; background: #fff; border-radius: 6px; font-size: 20px; line-height: 1; }
+  .fC .step span { min-width: 44px; text-align: center; }
+  .fC .bar { display: flex; height: 38px; border-radius: 8px; overflow: hidden; font: 600 15px 'Barlow Condensed', sans-serif; }
+  .fC .bar div { display: flex; align-items: center; padding: 0 10px; }
+  .fC .foot { margin-top: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .fC .foot button { height: 48px; border: 2px solid #17212B; background: #fff; border-radius: 8px; font: 600 17px 'Barlow Condensed', sans-serif; }
+  .fC .foot .go { grid-column: 1 / -1; height: 58px; background: #FFC72C; font-size: 22px; font-weight: 700; }
+  .fC .mapbox > img { left: -322px; top: -212px; width: 1325px; }
+  .fC .zm { position: absolute; right: 14px; top: 14px; display: flex; flex-direction: column; border: 2px solid #17212B; border-radius: 8px; overflow: hidden; }
+  .fC .zm span { width: 54px; height: 54px; display: grid; place-items: center; background: #fff; font: 600 28px/1 'Barlow', sans-serif; }
+  .fC .zm span + span { border-top: 2px solid #17212B; }
+  .fC .gps { position: absolute; right: 14px; bottom: 14px; height: 54px; padding: 0 16px; border: 2px solid #17212B; border-radius: 8px; background: #fff; display: flex; align-items: center; gap: 8px; font: 600 18px 'Barlow Condensed', sans-serif; }
+  .fC .chip { position: absolute; left: 14px; top: 14px; background: #17212B; color: #fff; padding: 7px 12px; border-radius: 6px; font: 500 15px 'Barlow Condensed', sans-serif; }
+
+  /* D. Garden sheet */
+  .fD { font: 15.5px/1.45 'Alegreya Sans', sans-serif; color: #22392B; background: #8F9A83; }
+  .fD .mapbox { position: absolute; inset: 0; }
+  .fD .mapbox > img { left: -42px; top: -325px; width: 1590px; }
+  .fD .sheet { position: absolute; z-index: 2; left: 16px; top: 16px; bottom: 16px; width: 384px; background: #F3F5EA; border-radius: 22px; padding: 18px 22px 20px; display: flex; flex-direction: column; box-shadow: 0 12px 34px rgba(18,40,26,.38); }
+  .fD .top { display: flex; justify-content: space-between; align-items: center; }
+  .fD .top b { font: 700 21px 'Alegreya', serif; }
+  .fD .top span { width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid rgba(34,57,43,.3); display: grid; place-items: center; }
+  .fD .sheet > * { flex-shrink: 0; }
+  .fD .pills { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 12px; }
+  .fD nav.pills { gap: 0; margin-left: -9px; }
+  .fD nav.pills span { border-color: transparent; padding: 0 9px; }
+  .fD .pills span { height: 31px; padding: 0 13px; border-radius: 16px; border: 1.5px solid rgba(34,57,43,.25); display: inline-flex; align-items: center; font-weight: 500; }
+  .fD .pills .on { background: #22392B; border-color: #22392B; color: #F3F5EA; }
+  .fD .pills.pick .on { background: #E7B24A; border-color: #E7B24A; color: #22392B; }
+  .fD h3.f { margin: 0; font: 700 31px/1.05 'Alegreya', serif; }
+  .fD .loc { margin: 3px 0 10px; color: #5E6B5F; }
+  .fD .story { margin: 0; font-size: 16.5px; line-height: 1.42; }
+  .fD .facts { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 12px; padding: 8px 0; border-top: 1px solid rgba(34,57,43,.18); border-bottom: 1px solid rgba(34,57,43,.18); }
+  .fD .facts b { display: block; font: 700 20px/1.1 'Alegreya', serif; font-variant-numeric: tabular-nums; }
+  .fD .facts span { font-size: 13.5px; color: #5E6B5F; }
+  .fD h4 { margin: 12px 0 6px; font: 700 17px 'Alegreya', serif; }
+  .fD .bar { display: flex; height: 12px; border-radius: 6px; overflow: hidden; }
+  .fD .sl { display: grid; grid-template-columns: 12px 1fr auto; gap: 8px; align-items: center; margin-top: 5px; font-size: 14.5px; }
+  .fD .sl i { width: 10px; height: 10px; border-radius: 50%; }
+  .fD .sl small { color: #5E6B5F; font-size: 13.5px; }
+  .fD .pills.pick { margin: 0; }
+  .fD .tg { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+  .fD .sw2 { width: 44px; height: 26px; border-radius: 13px; background: #3E7CB1; position: relative; }
+  .fD .sw2::after { content: ''; position: absolute; right: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; }
+  .fD .acts { margin-top: auto; padding-top: 12px; display: flex; flex-direction: column; gap: 4px; }
+  .fD .acts .go { height: 48px; border-radius: 24px; border: 0; background: #22392B; color: #F3F5EA; font: 700 17px 'Alegreya Sans', sans-serif; }
+  .fD .acts div { display: flex; justify-content: space-around; }
+  .fD .acts div span { font-weight: 500; text-decoration: underline; text-decoration-color: rgba(34,57,43,.35); text-underline-offset: 3px; padding: 4px 6px 0; }
+  .fD .zm { position: absolute; right: 18px; bottom: 18px; display: flex; flex-direction: column; gap: 8px; }
+  .fD .zm span { width: 44px; height: 44px; border-radius: 50%; background: #F3F5EA; display: grid; place-items: center; font-size: 22px; box-shadow: 0 4px 12px rgba(18,40,26,.3); }
+</style></head>
+<body>
+<div class="gal">
+<p>Same field, same features, four directions. Each one changes the layout of the menus, not just the colors. The map is a screenshot of today's app, so the drainage and elevation colors would also be retuned to suit whichever style you pick.</p>
+
+<section class="concept">
+  <h2>A. Field book</h2>
+  <p class="desc">Styled after a surveyor's waterproof level book. Ruled paper, a red margin line and coloured index tabs that stick out over the map. Checkboxes are marked with a red pencil X. It feels like notes a scout made walking the field.</p>
+  <div class="meta"><span class="sw"><i style="background:#E8EBC8"></i><i style="background:#C9D0AF"></i><i style="background:#2E3430"></i><i style="background:#B23A2E"></i><i style="background:#2F5D8C"></i></span><span>IBM Plex Sans Condensed</span><span>Light, paper</span></div>
+  <div class="stage"><div class="frame fA">
+    <div class="book">
+      <div class="brand"><b>FieldLines</b><span>Thu Nov 5 2026</span></div>
+      <input class="search" placeholder="Find a place, or paste lat, lon">
+      <h3 class="f">Ridge-top field</h3>
+      <p class="where">Viroqua, Wisconsin</p>
+      <dl>
+        <dt>Area</dt><dd>28.5 ac</dd>
+        <dt>Elevation</dt><dd>1,228.7 to 1,269.0 ft</dd>
+        <dt>Best-fit slope</dt><dd>2.27% toward SSW</dd>
+        <dt>Largest outlet</dt><dd>15.2 ac</dd>
+        <dt>Ponding, 2 in or more</dt><dd>None</dd>
+      </dl>
+      <h4>Soils</h4>
+      <div class="soil"><b>53%</b><span>Mt. Carroll silt loam, 2 to 6%</span></div>
+      <div class="soil"><b>47%</b><span>Seaton silt loam, 6 to 12%</span></div>
+      <h4>Show on the map</h4>
+      <div class="cks">
+        <span class="ck on"><i></i>Elevation</span><span class="ck"><i></i>Cut and fill</span>
+        <span class="ck"><i></i>Slope classes</span><span class="ck on"><i></i>Drainage paths</span>
+      </div>
+      <div class="acts"><button class="ink">Run 3D rain</button><button>PDF report</button><button>Save</button><button>Share</button></div>
+    </div>
+    <nav class="tabs">
+      <span style="--t:#F2D16B">Map</span><span style="--t:#A9CBB7">Layers</span><span style="--t:#E9A58F">Draw</span>
+      <span class="on">Field</span><span style="--t:#B9C4E2">Pins</span><span style="--t:#E6D3A3">Profile</span>
+    </nav>
+    <div class="mapbox"><img src="/Users/bradya/Documents/code/fieldlines/design/map.jpg" alt=""></div>
+  </div></div>
+</section>
+
+<section class="concept">
+  <h2>B. Survey map</h2>
+  <p class="desc">The menu becomes the margin of a USGS topographic sheet, with a double neatline and tick marks around the map. The legend swatches are the layer switches. A small compass shows which way the field falls, and soils carry their map-unit symbols the way the printed soil surveys did.</p>
+  <div class="meta"><span class="sw"><i style="background:#FFFFFF"></i><i style="background:#1E1E1E"></i><i style="background:#A0602F"></i><i style="background:#2F6FA8"></i><i style="background:#C1272D"></i><i style="background:#CFE3C2"></i></span><span>Public Sans with Source Serif italics</span><span>Light, white sheet</span></div>
+  <div class="stage"><div class="frame fB">
+    <div class="quad">
+      <div class="mapbox"><img src="/Users/bradya/Documents/code/fieldlines/design/map.jpg" alt=""></div>
+      <span class="tk" style="left:14px;top:-9px">90°51′45″</span><span class="tk" style="right:14px;top:-9px">90°50′15″</span>
+      <span class="tk" style="left:14px;bottom:-9px">43°34′50″</span><span class="tk" style="right:14px;bottom:-9px">43°34′50″</span>
+      <div class="stamp">Lidar flown April 2020, quality level 2<br><i>Drainage from 1 m bare-earth model</i></div>
+    </div>
+    <aside class="collar">
+      <h1>FieldLines</h1>
+      <p class="tag">Lidar drainage and grade for farm ground</p>
+      <nav><span>Map</span><span>Layers</span><span>Draw</span><span class="on">Field</span><span>Pins</span><span>Profile</span></nav>
+      <h3 class="f">Ridge-top field</h3>
+      <p class="loc">Viroqua, Vernon County, Wisconsin</p>
+      <div class="split">
+        <div>
+          <div class="ld"><span>Area</span><span class="d"></span><b>28.5 ac</b></div>
+          <div class="ld"><span>Elevation</span><span class="d"></span><b>1,229–1,269 ft</b></div>
+          <div class="ld"><span>Largest outlet</span><span class="d"></span><b>15.2 ac</b></div>
+          <div class="ld"><span>Ponding</span><span class="d"></span><b>None</b></div>
+        </div>
+        <div class="rose">
+          <svg viewBox="0 0 80 80" width="72" height="72"><circle cx="40" cy="40" r="30" fill="none" stroke="#1E1E1E" stroke-width="1"/>
+            <path d="M40 4 L44 16 L40 13 L36 16 Z" fill="#1E1E1E"/><text x="40" y="27" font-size="9" text-anchor="middle" font-family="Public Sans" font-weight="700">N</text>
+            <g transform="rotate(208 40 40)"><line x1="40" y1="40" x2="40" y2="12" stroke="#2F6FA8" stroke-width="3"/><path d="M40 6 L45 15 L35 15 Z" fill="#2F6FA8"/></g>
+            <circle cx="40" cy="40" r="2.5" fill="#1E1E1E"/></svg>
+          <div>Falls 2.27%<br>toward 208°</div>
+        </div>
+      </div>
+      <h4>Legend</h4>
+      <div class="lg"><span class="s" style="background:linear-gradient(90deg,#2b83ba,#abdda4,#ffffbf,#fdae61,#d7191c)"></span><span>Elevation</span><small>40 ft range</small></div>
+      <div class="lg off"><span class="s" style="background:linear-gradient(90deg,#C94A3C 50%,#3D79B8 50%)"></span><span>Cut and fill</span><small>off</small></div>
+      <div class="lg off"><span class="s" style="background:linear-gradient(90deg,#d9ef8b 33%,#fee08b 33% 66%,#f46d43 66%)"></span><span>Slope classes</span><small>off</small></div>
+      <div class="lg"><svg width="36" height="14"><path d="M1 10 C10 2 20 13 35 4" stroke="#2F6FA8" stroke-width="3" fill="none"/></svg><span>Drainage paths</span><small>2 ac and up</small></div>
+      <div class="lg off"><svg width="36" height="14"><path d="M1 4 H35 M1 10 H35" stroke="#A0602F" stroke-width="1.2"/></svg><span>Contours</span><small>off</small></div>
+      <div class="lg off"><svg width="36" height="14"><path d="M1 7 H35" stroke="#C1272D" stroke-width="2" stroke-dasharray="6 3"/></svg><span>Sections and townships</span><small>off</small></div>
+      <h4>Soils</h4>
+      <div class="su"><span>114B2</span><span>Mt. Carroll silt loam</span><b>53%</b></div>
+      <div class="su"><span>115C2</span><span>Seaton silt loam</span><b>47%</b></div>
+      <div class="acts"><button class="k">Run 3D rain</button><button>PDF report</button><button>Save</button><button>Share</button></div>
+    </aside>
+  </div></div>
+</section>
+
+<section class="concept">
+  <h2>C. Cab display</h2>
+  <p class="desc">Built for a phone in bright sun or a tablet in the tractor. An icon rail opens one panel at a time instead of one long scroll. The readouts are big, and every control is large enough to hit with a gloved thumb. Signal yellow marks what's selected.</p>
+  <div class="meta"><span class="sw"><i style="background:#17212B"></i><i style="background:#EEF0EC"></i><i style="background:#FFFFFF"></i><i style="background:#FFC72C"></i><i style="background:#2E7D32"></i></span><span>Barlow and Barlow Condensed</span><span>High contrast, sunlight</span></div>
+  <div class="stage"><div class="frame fC">
+    <nav class="rail">
+      <button><svg viewBox="0 0 24 24"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z M9 3v15 M15 6v15"/></svg>Map</button>
+      <button><svg viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z M3 13l9 5 9-5"/></svg>Layers</button>
+      <button><svg viewBox="0 0 24 24"><path d="M4 18L9 5l8 3 3 10z"/><circle cx="4" cy="18" r="1.5"/><circle cx="9" cy="5" r="1.5"/></svg>Draw</button>
+      <button class="on"><svg viewBox="0 0 24 24"><path d="M3 17c4-6 7 2 10-3s5-3 8-7 M3 21h18"/></svg>Field</button>
+      <button><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11a7 7 0 0114 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>Pins</button>
+      <button><svg viewBox="0 0 24 24"><path d="M3 18l5-7 4 4 3-5 6 8z"/></svg>Profile</button>
+    </nav>
+    <div class="panel">
+      <h3 class="f">Ridge-top field</h3>
+      <p class="loc">Viroqua, Wisconsin</p>
+      <div class="ro">
+        <div><b>28.5<small>ac</small></b><span>Area</span></div>
+        <div><b>2.27<small>%</small></b><span>Slope</span></div>
+        <div><b>SSW</b><span>Falls toward</span></div>
+        <div><b>40.3<small>ft</small></b><span>Relief</span></div>
+        <div><b>15.2<small>ac</small></b><span>Largest outlet</span></div>
+        <div><b>0.0<small>ac</small></b><span>Ponding</span></div>
+      </div>
+      <div class="lbl">Color the field by</div>
+      <div class="seg"><button class="on">Elevation</button><button>Cut/fill</button><button>Slope</button><button>Off</button></div>
+      <div class="tg">Drainage paths<span class="sw2"></span></div>
+      <div class="tg">Contours<span class="step"><button>−</button><span>1 ft</span><button>+</button></span></div>
+      <div class="lbl">Soils</div>
+      <div class="bar"><div style="width:53%;background:#7B5B3E;color:#fff">Mt. Carroll 53%</div><div style="width:47%;background:#C9AE84">Seaton 47%</div></div>
+      <div class="foot"><button class="go">Run 3D rain</button><button>Report</button><button>Save</button><button>Share</button></div>
+    </div>
+    <div class="mapbox">
+      <img src="/Users/bradya/Documents/code/fieldlines/design/map.jpg" alt="">
+      <span class="chip">Lidar April 2020</span>
+      <div class="zm"><span>+</span><span>−</span></div>
+      <div class="gps"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#17212B" stroke-width="2.2"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="#17212B"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg>My location</div>
+    </div>
+  </div></div>
+</section>
+
+<section class="concept">
+  <h2>D. Garden sheet</h2>
+  <p class="desc">A soft panel floating over a full-screen map, written for growers who are new to lidar. It describes the field in plain sentences before showing any numbers. The deep kale green and squash yellow come from a seed catalogue, not a software kit.</p>
+  <div class="meta"><span class="sw"><i style="background:#F3F5EA"></i><i style="background:#22392B"></i><i style="background:#E7B24A"></i><i style="background:#7A5638"></i><i style="background:#3E7CB1"></i></span><span>Alegreya and Alegreya Sans</span><span>Light, floating</span></div>
+  <div class="stage"><div class="frame fD">
+    <div class="mapbox"><img src="/Users/bradya/Documents/code/fieldlines/design/map.jpg" alt=""></div>
+    <div class="sheet">
+      <div class="top"><b>FieldLines</b><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22392B" stroke-width="2.4"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg></span></div>
+      <nav class="pills"><span>Map</span><span>Layers</span><span>Draw</span><span class="on">Field</span><span>Pins</span><span>Profile</span></nav>
+      <h3 class="f">Ridge-top field</h3>
+      <p class="loc">Viroqua, Wisconsin</p>
+      <p class="story"><b>28.5 acres</b> that fall gently, about <b>2.3%</b>, toward the south-southwest. Rain gathers into one main path draining <b>15.2 acres</b>. No low spots hold 2 inches of water or more.</p>
+      <div class="facts"><div><b>1,229 ft</b><span>Lowest</span></div><div><b>1,269 ft</b><span>Highest</span></div><div><b>Well</b><span>Drained soils</span></div></div>
+      <h4>Soil</h4>
+      <div class="bar"><div style="width:53%;background:#7A5638"></div><div style="width:47%;background:#C99D5E"></div></div>
+      <div class="sl"><i style="background:#7A5638"></i><span>Mt. Carroll silt loam</span><small>53%</small></div>
+      <div class="sl"><i style="background:#C99D5E"></i><span>Seaton silt loam</span><small>47%</small></div>
+      <h4>Color the field by</h4>
+      <div class="pills pick"><span class="on">Elevation</span><span>Cut and fill</span><span>Slope</span></div>
+      <div class="tg"><span>Show where water runs</span><span class="sw2"></span></div>
+      <div class="acts"><button class="go">Watch it rain on this field</button><div><span>Print report</span><span>Save</span><span>Share</span></div></div>
+    </div>
+    <div class="zm"><span>+</span><span>−</span></div>
+  </div></div>
+</section>
+</div>
+<script>
+  const fit = () => document.querySelectorAll('.stage').forEach(s => { s.firstElementChild.style.zoom = s.clientWidth / 1120; });
+  fit(); addEventListener('resize', fit);
+</script>
+</body></html>

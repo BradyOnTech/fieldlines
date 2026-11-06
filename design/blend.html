@@ -1,0 +1,130 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FieldLines blend</title>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=Source+Serif+4:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  .gal { font-family: var(--font-sans, system-ui, sans-serif); color: var(--foreground, #222); }
+  .concept { margin: 0 0 30px; }
+  .concept h2 { font-size: 18px; margin: 0 0 4px; }
+  .concept .desc { margin: 0 0 10px; font-size: 14px; line-height: 1.5; }
+  .stage { width: 100%; border-radius: 8px; overflow: hidden; box-shadow: 0 0 0 1px var(--border, #ccc); }
+  .frame { position: relative; box-sizing: border-box; width: 1120px; height: 700px; overflow: hidden; }
+  .frame * { box-sizing: border-box; }
+  .frame button, .frame input { font: inherit; color: inherit; }
+  .mapbox { position: absolute; inset: 0; overflow: hidden; }
+  .mapbox > img { position: absolute; max-width: none; display: block; width: 1590px; top: -325px; }
+
+  .fE { font: 15px/1.5 'Public Sans', sans-serif; color: #22392B; background: #8F9A83; }
+  .fE .sheet { position: absolute; z-index: 2; left: 16px; top: 16px; bottom: 16px; display: flex; background: #F3F5EA; border-radius: 20px; overflow: hidden; box-shadow: 0 12px 34px rgba(18,40,26,.38); }
+  .fE .rail { width: 78px; background: #22392B; display: flex; flex-direction: column; gap: 4px; padding: 14px 8px; }
+  .fE .rail .mark { display: grid; place-items: center; height: 44px; margin-bottom: 8px; }
+  .fE .rail button { height: 62px; border: 0; border-radius: 12px; background: none; color: #C5D0C0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: 600; }
+  .fE .rail svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+  .fE .rail .on { background: #E7B24A; color: #22392B; }
+  .fE .rail .mark svg { width: 30px; height: 30px; stroke: #E7B24A; }
+  .fE .body { width: 360px; padding: 18px 22px 20px; display: flex; flex-direction: column; }
+  .fE .body > * { flex-shrink: 0; }
+  .fE.v2 .body { width: 388px; }
+  .fE .top { display: flex; justify-content: space-between; align-items: center; }
+  .fE .top b { font-size: 19px; font-weight: 700; letter-spacing: -.01em; }
+  .fE .top span { width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid rgba(34,57,43,.28); display: grid; place-items: center; }
+  .fE .tabs { display: flex; gap: 15px; margin-top: 10px; border-bottom: 1.5px solid rgba(34,57,43,.22); }
+  .fE .tabs span { padding-bottom: 7px; margin-bottom: -1.5px; color: #4D5E51; }
+  .fE .tabs .on { color: #22392B; font-weight: 700; border-bottom: 3px solid #E7B24A; }
+  .fE h3.f { margin: 16px 0 0; font: 600 29px/1.1 'Source Serif 4', serif; letter-spacing: -.01em; }
+  .fE .loc { margin: 3px 0 10px; font: italic 400 15px 'Source Serif 4', serif; color: #5E6B5F; }
+  .fE .story { margin: 0 0 10px; font-size: 15.5px; line-height: 1.5; }
+  .fE .ld { display: flex; align-items: baseline; font-size: 14px; line-height: 1.6; }
+  .fE .ld .d { flex: 1; border-bottom: 1.5px dotted rgba(34,57,43,.35); margin: 0 6px; transform: translateY(-4px); }
+  .fE .ld b { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .fE h4 { margin: 12px 0 7px; padding-top: 9px; border-top: 1px solid rgba(34,57,43,.18); font-size: 14px; font-weight: 700; }
+  .fE .bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; margin-bottom: 4px; }
+  .fE .su { display: grid; grid-template-columns: 50px 1fr auto; gap: 8px; align-items: center; padding: 2px 0; font-size: 14px; }
+  .fE .su span:first-child { border: 1.5px solid; border-radius: 4px; text-align: center; font-size: 11px; font-weight: 700; line-height: 17px; }
+  .fE .su i { font: italic 400 13.5px 'Source Serif 4', serif; color: #5E6B5F; }
+  .fE .pills { display: flex; gap: 6px; }
+  .fE .pills span { height: 30px; padding: 0 12px; border-radius: 15px; border: 1.5px solid rgba(34,57,43,.25); display: inline-flex; align-items: center; font-size: 14px; font-weight: 500; }
+  .fE .pills .on { background: #E7B24A; border-color: #E7B24A; }
+  .fE .tg { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 14.5px; }
+  .fE .sw2 { width: 42px; height: 24px; border-radius: 12px; background: #3E7CB1; position: relative; }
+  .fE .sw2::after { content: ''; position: absolute; right: 3px; top: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; }
+  .fE .acts { margin-top: auto; padding-top: 12px; display: flex; flex-direction: column; gap: 4px; }
+  .fE .acts .go { height: 46px; border-radius: 23px; border: 0; background: #22392B; color: #F3F5EA; font-size: 16px; font-weight: 600; }
+  .fE .acts div { display: flex; justify-content: space-around; font-size: 14.5px; }
+  .fE .acts div span { font-weight: 500; text-decoration: underline; text-decoration-color: rgba(34,57,43,.35); text-underline-offset: 3px; padding: 4px 6px 0; }
+  .fE .zm { position: absolute; right: 18px; bottom: 18px; display: flex; flex-direction: column; gap: 8px; }
+  .fE .zm span { width: 44px; height: 44px; border-radius: 50%; background: #F3F5EA; display: grid; place-items: center; font-size: 22px; color: #22392B; box-shadow: 0 4px 12px rgba(18,40,26,.3); }
+</style></head>
+<body>
+<div class="gal">
+<section class="concept">
+  <h2>1. With an icon rail</h2>
+  <p class="desc">A kale-green strip down the left edge of the panel. Each icon opens one section, and the open one turns squash yellow.</p>
+  <div class="stage"><div class="frame fE">
+    <div class="mapbox"><img style="left:-9px" src="/Users/bradya/Documents/code/fieldlines/design/map.jpg" alt=""></div>
+    <div class="sheet">
+      <nav class="rail">
+        <div class="mark"><svg width="30" height="30" viewBox="0 0 30 30" fill="none" stroke="#E7B24A" stroke-width="2" stroke-linecap="round"><path d="M4 21c5-6 9 1 14-4s6-5 8-6"/><path d="M4 26c5-5 10 0 15-3s6-4 7-4"/><path d="M4 15c4-6 8 0 12-5s7-5 10-6"/></svg></div>
+        <button><svg viewBox="0 0 24 24"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z M9 3v15 M15 6v15"/></svg>Map</button>
+        <button><svg viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z M3 13l9 5 9-5"/></svg>Layers</button>
+        <button><svg viewBox="0 0 24 24"><path d="M4 18L9 5l8 3 3 10z"/></svg>Draw</button>
+        <button class="on"><svg viewBox="0 0 24 24"><path d="M3 17c4-6 7 2 10-3s5-3 8-7 M3 21h18"/></svg>Field</button>
+        <button><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11a7 7 0 0114 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>Pins</button>
+        <button><svg viewBox="0 0 24 24"><path d="M3 18l5-7 4 4 3-5 6 8z"/></svg>Profile</button>
+      </nav>
+      <div class="body">
+        <div class="top"><b>FieldLines</b><span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#22392B" stroke-width="2.4"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg></span></div>
+        <h3 class="f">Ridge-top field</h3>
+        <p class="loc">Viroqua, Vernon County, Wisconsin</p>
+        <p class="story"><b>28.5 acres</b> that fall gently, about <b>2.3%</b>, toward the south-southwest. Rain gathers into one main path draining <b>15.2 acres</b>. No low spots hold 2 inches of water or more.</p>
+        <div class="ld"><span>Lowest point</span><span class="d"></span><b>1,229 ft</b></div>
+        <div class="ld"><span>Highest point</span><span class="d"></span><b>1,269 ft</b></div>
+        <div class="ld"><span>Largest outlet</span><span class="d"></span><b>15.2 ac</b></div>
+        <h4>Soil</h4>
+        <div class="bar"><div style="width:53%;background:#7A5638"></div><div style="width:47%;background:#C99D5E"></div></div>
+        <div class="su"><span style="color:#7A5638">114B2</span><span>Mt. Carroll silt loam</span><b>53%</b></div>
+        <div class="su"><span style="color:#A9793A">115C2</span><span>Seaton silt loam</span><b>47%</b></div>
+        <h4>Color the field by</h4>
+        <div class="pills"><span class="on">Elevation</span><span>Cut and fill</span><span>Slope</span></div>
+        <div class="tg"><span>Show where water runs</span><span class="sw2"></span></div>
+        <div class="acts"><button class="go">Watch it rain on this field</button><div><span>Print report</span><span>Save</span><span>Share</span></div></div>
+      </div>
+    </div>
+    <div class="zm"><span>+</span><span>−</span></div>
+  </div></div>
+</section>
+
+<section class="concept">
+  <h2>2. With B's text tabs</h2>
+  <p class="desc">Section names in a row under the logo, the way B's map margin had them, with a squash underline on the open one. It leaves more width for the panel.</p>
+  <div class="stage"><div class="frame fE v2">
+    <div class="mapbox"><img style="left:-27px" src="/Users/bradya/Documents/code/fieldlines/design/map.jpg" alt=""></div>
+    <div class="sheet">
+      <div class="body">
+        <div class="top"><b>FieldLines</b><span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#22392B" stroke-width="2.4"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg></span></div>
+        <nav class="tabs"><span>Map</span><span>Layers</span><span>Draw</span><span class="on">Field</span><span>Pins</span><span>Profile</span></nav>
+        <h3 class="f">Ridge-top field</h3>
+        <p class="loc">Viroqua, Vernon County, Wisconsin</p>
+        <p class="story"><b>28.5 acres</b> that fall gently, about <b>2.3%</b>, toward the south-southwest. Rain gathers into one main path draining <b>15.2 acres</b>. No low spots hold 2 inches of water or more.</p>
+        <div class="ld"><span>Lowest point</span><span class="d"></span><b>1,229 ft</b></div>
+        <div class="ld"><span>Highest point</span><span class="d"></span><b>1,269 ft</b></div>
+        <div class="ld"><span>Largest outlet</span><span class="d"></span><b>15.2 ac</b></div>
+        <h4>Soil</h4>
+        <div class="bar"><div style="width:53%;background:#7A5638"></div><div style="width:47%;background:#C99D5E"></div></div>
+        <div class="su"><span style="color:#7A5638">114B2</span><span>Mt. Carroll silt loam</span><b>53%</b></div>
+        <div class="su"><span style="color:#A9793A">115C2</span><span>Seaton silt loam</span><b>47%</b></div>
+        <h4>Color the field by</h4>
+        <div class="pills"><span class="on">Elevation</span><span>Cut and fill</span><span>Slope</span></div>
+        <div class="tg"><span>Show where water runs</span><span class="sw2"></span></div>
+        <div class="acts"><button class="go">Watch it rain on this field</button><div><span>Print report</span><span>Save</span><span>Share</span></div></div>
+      </div>
+    </div>
+    <div class="zm"><span>+</span><span>−</span></div>
+  </div></div>
+</section>
+</div>
+<script>
+  const fit = () => document.querySelectorAll('.stage').forEach(s => { s.firstElementChild.style.zoom = s.clientWidth / 1120; });
+  fit(); addEventListener('resize', fit);
+</script>
+</body></html>
