@@ -687,7 +687,13 @@
               <input id="zFile" type="file" accept=".csv,.txt" hidden>
             </div>
           </div>
-          <p class="foot">Records stay in this browser. Export the harvest log and soil zones to keep copies.</p>
+          <h2 class="sh">Backup</h2>
+          <div class="card">
+            <p class="note" style="margin:6px 0">Records, pins, tracks and saved fields live only in this browser. Clearing site data or changing phones loses them, so save a backup now and then.</p>
+            <div class="btns grow"><button id="bkSave">Save a backup</button><button id="bkLoad">Restore a backup</button></div>
+            <input id="bkFile" type="file" accept=".json,application/json" hidden>
+            <p id="bkNote" class="note"></p>
+          </div>
         </section>
 
         <section class="pane" data-pane="profile">
@@ -5078,6 +5084,49 @@ $('wSave').onclick = () => {
 $('wList').addEventListener('click', e => { const id = e.target.dataset.wdel; if (id && confirm('Delete this entry?')) { rec.water = rec.water.filter(w => w.id !== id); saveRec(); renderRecords(); } });
 $('wExport').onclick = () => downloadBlob('water-log.csv', new Blob([['date,kind,' + (metric ? 'mm' : 'inches') + ',block',
   ...[...rec.water].sort((a, b) => a.date.localeCompare(b.date)).map(w => [w.date, w.kind === 'rain' ? 'rain gauge' : 'watering', fmt(metric ? w.mm : w.mm / 25.4, 2).replace(/,/g, ''), `"${String((w.block ? blockById(w.block)?.name : 'all blocks') || '').replace(/"/g, '""')}"`].join(','))].join('\n')], { type: 'text/csv' }));
+// ── backup and restore: everything you've entered (records, pins and tracks, saved fields) in one file ──
+// Caches (weather, lidar) and settings aren't included: they come back on their own.
+const BK_KEY = 'fieldlines.backup.v1';
+const entryCount = () => rec.blocks.length + rec.harvests.length + rec.water.length + Object.keys(rec.soil).length + marks.pins.length + marks.lines.length + loadSaved().length;
+function renderBackup() {
+  let b = null; try { b = JSON.parse(localStorage.getItem(BK_KEY)); } catch { /* none */ }
+  const n = entryCount();
+  $('bkNote').textContent = !n ? '' : !b ? 'No backup saved from this browser yet.' :
+    `Last backup ${b.at === today() ? 'today' : dayLabel(dayNum(b.at)) + (b.at.slice(0, 4) !== today().slice(0, 4) ? ' ' + b.at.slice(0, 4) : '')}${n !== b.n ? ', and your records have changed since' : ''}.`;
+}
+$('bkSave').onclick = () => {
+  const data = { app: 'FieldLines', kind: 'backup', version: 1, saved: new Date().toISOString(), records: rec,
+    marks: JSON.parse(JSON.stringify(marks, (k, v) => k.startsWith('_') ? undefined : v)), fields: loadSaved() };
+  downloadBlob(`fieldlines-backup-${today()}.json`, new Blob([JSON.stringify(data)], { type: 'application/json' }));
+  try { localStorage.setItem(BK_KEY, JSON.stringify({ at: today(), n: entryCount() })); } catch { /* ignore */ }
+  renderBackup(); setStatus('Backup saved. Keep it somewhere other than this device, like email or cloud storage.');
+};
+$('bkLoad').onclick = () => $('bkFile').click();
+$('bkFile').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  let b = null; try { b = JSON.parse(await f.text()); } catch { /* not JSON */ }
+  const arr = v => Array.isArray(v) ? v.filter(x => x && typeof x === 'object' && x.id) : [];
+  if (b?.app !== 'FieldLines' || b.kind !== 'backup' || !Array.isArray(b.records?.blocks)) return setStatus('That file isn\'t a FieldLines backup.', true);
+  if (b.version > 1) return setStatus('That backup is from a newer version of FieldLines. Reload the app and try again.', true);
+  const r = { blocks: arr(b.records.blocks), harvests: arr(b.records.harvests), water: arr(b.records.water), soil: b.records.soil && typeof b.records.soil === 'object' ? b.records.soil : {} };
+  const mk = { pins: arr(b.marks?.pins), lines: arr(b.marks?.lines) }, fl = Array.isArray(b.fields) ? b.fields.filter(x => x?.name && x.hash) : [];
+  const parts = [[r.blocks.length, 'block', 'blocks'], [r.harvests.length, 'harvest', 'harvests'], [r.water.length, 'rain or watering entry', 'rain and watering entries'], [Object.keys(r.soil).length, 'soil plan', 'soil plans'],
+    [mk.pins.length, 'pin', 'pins'], [mk.lines.length, 'track or line', 'tracks and lines'], [fl.length, 'saved field', 'saved fields']].filter(([n]) => n).map(([n, one, many]) => `${n} ${n > 1 ? many : one}`);
+  const when = b.saved ? new Date(b.saved).toLocaleDateString() : 'an unknown date';
+  if (!confirm(`Restore the backup from ${when}?\n\n${parts.join(', ') || 'It has no entries'}.\n\nIt's added to what's in this browser. Entries in both are taken from the backup, and nothing else here is removed.`)) return;
+  const byId = (mine, theirs) => { const m = new Map(mine.map(x => [x.id, x])); for (const x of theirs) m.set(x.id, x); return [...m.values()]; };
+  const recNext = { ...rec, blocks: byId(rec.blocks, r.blocks), harvests: byId(rec.harvests, r.harvests), water: byId(rec.water, r.water), soil: { ...rec.soil, ...r.soil } };
+  const marksNext = { ...marks, pins: byId(marks.pins, mk.pins), lines: byId(marks.lines, mk.lines) };
+  const sv = new Map(loadSaved().map(x => [x.name, x])); for (const x of fl) sv.set(x.name, x);
+  const savedNext = [...sv.values()].sort((p, q) => (q.saved || 0) - (p.saved || 0)).slice(0, 50);
+  // all three or none: if the browser is out of room, put back what was there
+  const keys = [REC_KEY, MARK_KEY, SAVE_KEY]; let old = [];
+  try { old = keys.map(k => localStorage.getItem(k)); localStorage.setItem(REC_KEY, JSON.stringify(recNext)); localStorage.setItem(MARK_KEY, JSON.stringify(marksNext, (k, v) => k.startsWith('_') ? undefined : v)); localStorage.setItem(SAVE_KEY, JSON.stringify(savedNext)); }
+  catch { keys.forEach((k, i) => { try { old[i] == null ? localStorage.removeItem(k) : localStorage.setItem(k, old[i]); } catch { /* ignore */ } }); return setStatus('There isn\'t enough room in this browser to restore that backup. Nothing was changed.', true); }
+  try { sessionStorage.setItem('fieldlines.restored', parts.join(', ')); } catch { /* ignore */ }
+  location.reload();
+};
+try { const m = sessionStorage.getItem('fieldlines.restored'); if (m != null) { sessionStorage.removeItem('fieldlines.restored'); setTimeout(() => setStatus(`Backup restored: ${m || 'no entries'}.`), 1500); } } catch { /* ignore */ }
 
 // ── the Records pane ──
 function renderRecords() {
@@ -5109,7 +5158,7 @@ function renderRecords() {
       return `<tr><td>${esc(b.name)}</td><td>${fmt(y, 1)}</td><td>${y >= sum.mean ? '+' : ''}${fmt((y / sum.mean - 1) * 100, 0)}%</td><td><small>${b.ground ? `${b.ground.pondPct >= 0.5 ? fmt(b.ground.pondPct, 0) + '% ponds, ' : ''}wetness ${fmt(b.ground.wet, 1)}, ${fmt(b.ground.slope, 1)}%` : '…'}</small></td></tr>`; }).join('') + '</table>' +
     (sum.skipped ? `<p class="note">${sum.skipped} entr${sum.skipped > 1 ? 'ies' : 'y'} in other units left out.</p>` : '') + `<p class="insight">${yieldInsight(sum)}</p>`;
   $('plantTable').innerHTML = sum ? plantingTable(sum) : '';
-  loadWeather(); renderWater();
+  loadWeather(); renderWater(); renderBackup();
   drawBlocks(); renderSoil();
   rec.blocks.forEach(ensureGround);
 }
