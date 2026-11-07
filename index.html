@@ -250,6 +250,7 @@
   #stormBox input[type=range].wide { flex: 1; width: auto; }
   .note { color: var(--muted); font-size: 11.5px; }
   .note:empty { display: none; }
+  .olabel { position: absolute; transform: translate(-50%, -140%); font: 700 11px var(--mono); color: #fff; background: rgba(20,70,160,.92); padding: 2px 6px; border-radius: 5px; white-space: nowrap; box-shadow: 0 1px 4px #0006; }
   .blk { border-top: .5px solid var(--line); padding: 7px 0; }
   .blk:first-child { border-top: 0; }
   .blk .bhead { display: flex; gap: 6px; align-items: center; }
@@ -261,6 +262,7 @@
   .htab th, .ztab th { text-align: left; color: var(--muted); font-weight: 500; padding: 3px 4px; border-bottom: .5px solid var(--line); }
   .htab td, .ztab td { padding: 4px; border-bottom: .5px solid var(--line); vertical-align: top; }
   .htab code { font-size: 11px; }
+  .ptab td + td { white-space: nowrap; }
   .ztab td:first-child { min-width: 104px; }
   .ztab td i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; }
   .ztab td small { display: block; color: var(--muted); font-size: 10.5px; line-height: 1.3; }
@@ -455,7 +457,7 @@
           </div>
           <h2 class="sh">Units</h2>
           <div class="card"><div class="row"><label for="unitSel">Measurements</label><select id="unitSel"><option value="us">US: ft, ac</option><option value="metric">Metric: m, ha</option></select></div></div>
-          <p class="foot">Elevation from USGS 3DEP (public domain), imagery from Esri. Drainage uses priority-flood depression filling and D8 flow accumulation inside the analysis window, so water arriving from far outside the window is undercounted.</p>
+          <p class="foot">Elevation from USGS 3DEP (public domain), imagery from Esri, weather history from Open-Meteo (CC BY 4.0). Drainage uses priority-flood depression filling and D8 flow accumulation inside the analysis window, so water arriving from far outside the window is undercounted.</p>
         </section>
 
         <section class="pane" data-pane="layers">
@@ -518,17 +520,22 @@
 
             <h2 class="sh">Storm on the map</h2>
             <div class="card" id="stormBox">
-              <div class="row"><label for="mStorm">Storm</label><select id="mStorm"></select></div>
+              <div class="row"><label for="mMonth">Season</label><select id="mMonth" title="Which month's everyday rain to offer"></select></div>
+              <div class="row"><label for="mStorm">Rain</label><select id="mStorm"></select></div>
+              <div id="mClimNote" class="note" style="margin:-2px 0 6px"></div>
               <div class="row"><label for="mGround">Ground</label><select id="mGround"><option value="existing">Today</option><option value="design">Your design</option></select></div>
               <div class="row"><label for="mEdge">Field edge</label><select id="mEdge"><option value="open">Natural</option><option value="drain">Drains away</option><option value="berm">Bermed</option></select></div>
-              <div class="row"><label for="mSoak">Soak-in</label><input id="mSoak" type="range" min="0" max="2" step="0.05" value="0.4"><output id="oSoak"></output></div>
+              <div class="row"><label for="mSoak">Soak-in</label><input id="mSoak" type="range" min="0" max="3" step="0.01" value="0.4"><output id="oSoak"></output></div>
+              <div class="row hidden" id="omRow"><label for="mOM">Organic matter <span id="mOMsrc" class="note"></span></label><input id="mOM" type="number" step="0.1" min="0" max="15" style="width:64px"><span class="u">%</span></div>
+              <div class="row hidden" id="mZoneRow"><label for="mZoneOM">Use each soil zone's organic matter</label><input id="mZoneOM" type="checkbox"></div>
               <div id="mSoakNote" class="note" style="margin:-4px 0 6px"></div>
-              <div class="btns grow"><button id="mPlay" class="primary">▶ Play the storm</button><button id="mClear" class="ghost">Clear</button></div>
+              <div class="btns grow"><button id="mPlay" class="primary">▶ Play the storm</button><button id="mMore" title="Step up to the next bigger rain and play it">More rain ↑</button><button id="mClear" class="ghost">Clear</button></div>
               <div id="stormTimeRow" class="hidden">
                 <div class="row"><input id="mTime" type="range" min="0" max="0" value="0" class="wide"><output id="oTime"></output></div>
                 <div class="row"><label for="mPeak">Show the deepest water reached</label><input id="mPeak" type="checkbox"></div>
               </div>
               <div id="mStats"></div>
+              <div id="mBudget" class="insight"></div>
               <div id="mLegend" class="dlegend"></div>
             </div>
 
@@ -643,17 +650,28 @@
           <div class="card">
             <div class="row"><label for="hBlock">Block</label><select id="hBlock"></select></div>
             <div class="row"><label for="hDate">Date</label><input id="hDate" type="date"></div>
+            <div class="row"><label for="hPlanted">Planted</label><input id="hPlanted" type="date" title="Optional: when this planting went in, so its weather can be totalled"></div>
             <div class="row"><label for="hCrop">Crop</label><input id="hCrop" type="text" list="hCrops" placeholder="e.g. Tomatoes"><datalist id="hCrops"></datalist></div>
             <div class="row"><label for="hAmount">Amount</label><input id="hAmount" type="number" step="any" min="0"><select id="hUnit"></select></div>
             <div class="row"><label for="hNote">Note</label><input id="hNote" type="text" placeholder="optional"></div>
             <div class="btns grow"><button id="hSave" class="primary">Save harvest</button><button id="hExport" class="hidden" title="Every harvest with its lot code, for traceability records">Harvest log (.csv)</button></div>
             <div id="hList"></div>
           </div>
+          <h2 class="sh">Rain and watering</h2>
+          <div class="card">
+            <p id="wxNow" class="note" style="margin:6px 0">Draw a bed or block and the farm's weather history appears here.</p>
+            <div class="row"><label for="wKind">Log</label><select id="wKind" title="A gauge reading is the rain since your last reading, logged on the day you read it"><option value="rain">Rain gauge</option><option value="irr">Watering</option></select><select id="wBlock" class="hidden"></select></div>
+            <div class="row"><label for="wDate">Date</label><input id="wDate" type="date"></div>
+            <div class="row"><label for="wAmount">Amount</label><input id="wAmount" type="number" step="any" min="0"><span id="wUnit" class="note"></span></div>
+            <div class="btns grow"><button id="wSave">Save</button><button id="wExport" class="hidden">Water log (.csv)</button></div>
+            <div id="wList"></div>
+          </div>
           <div id="yieldBox" class="hidden">
             <h2 class="sh">Yield by block</h2>
             <div class="card">
               <div class="row"><label for="ySeason">Season</label><select id="ySeason"></select><select id="yCrop"></select></div>
               <div id="yieldTable"></div>
+              <div id="plantTable"></div>
             </div>
           </div>
           <h2 class="sh">Soil sampling</h2>
@@ -733,9 +751,9 @@
   <div id="flowbar">
     <strong>3D rain flow</strong>
     <label>Design storm <select id="rStorm"><option value="">Custom</option></select></label>
-    <label>Rain <input id="rRate" type="range" min="0.05" max="6" step="0.01" value="2"><output id="oRate"></output></label>
+    <label>Rain <input id="rRate" type="range" min="0.005" max="6" step="0.005" value="2"><output id="oRate"></output></label>
     <label>Storm <input id="rLen" type="range" min="10" max="1440" step="10" value="60"><output id="oLen"></output></label>
-    <label>Soak-in <input id="rInfil" type="range" min="0" max="2" step="0.05" value="0.4"><output id="oInfil"></output></label>
+    <label>Soak-in <input id="rInfil" type="range" min="0" max="3" step="0.01" value="0.4"><output id="oInfil"></output></label>
     <label>Height stretch <input id="rExag" type="range" min="1" max="30" step="1" value="6"><output id="oExag"></output></label>
     <label>Speed <input id="rSpeed" type="range" min="1" max="6" step="1" value="3"><output id="oSpeed"></output></label>
     <label title="Rain on the ground as it is today, or on your cut/fill design">Ground <select id="rGround"><option value="existing">Today</option><option value="design">Your design</option><option value="side">Side by side</option><option value="swipe">Before → after</option></select></label>
@@ -2549,7 +2567,7 @@ async function analyzeFields(rings, opts = {}) {
   renderOverlay(); drawDrainage(); renderContours();
   loadFieldSoils(field);
   busy('');
-  drawFieldNames(); renderFieldsBox(); stopMapStorm(); fillMapStorms(); renderSoil();
+  drawFieldNames(); renderFieldsBox(); stopMapStorm(); $('omRow').classList.add('hidden'); $('mZoneRow').classList.add('hidden'); $('mOM').value = ''; $('mZoneOM').checked = false; $('mSoakNote').textContent = ''; fillMapStorms(); renderSoil();
   const bounds = outline.getBounds();
   if (!map.getBounds().contains(bounds)) map.fitBounds(bounds, { padding: [40, 40] });
   (window.requestIdleCallback || setTimeout)(() => needLib('jspdf').catch(() => {}));
@@ -3541,6 +3559,11 @@ async function stormPeakImage(run) {
   ctx.imageSmoothingEnabled = false; ctx.drawImage(dc, 0, 0, w, h);
   ctx.strokeStyle = '#e3b341'; ctx.lineWidth = 3 * w / 900;
   for (const ring of field.mercRings) { ctx.beginPath(); ring.forEach((p, i) => { const X = (p.x - b[0]) * sc, Y = (b[3] - p.y) * sc; i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); }); ctx.closePath(); ctx.stroke(); }
+  const k = w / 900; ctx.font = `bold ${Math.round(12 * k)}px monospace`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (const o of waterBudget(run.sim).outlets) {                    // how much left through each outlet
+    const X = (o.c + 0.5) / run.nx * w, Y = (o.r + 0.5) / run.ny * h - 16 * k, t = uWater(o.vol).replace('³', '3'), tw = ctx.measureText(t).width + 10 * k;
+    ctx.fillStyle = 'rgba(20,70,160,.92)'; ctx.fillRect(X - tw / 2, Y - 9 * k, tw, 18 * k); ctx.fillStyle = '#fff'; ctx.fillText(t, X, Y + k);
+  }
   return { url: cv.toDataURL('image/jpeg', 0.88), w, h };
 }
 // Cut sheet: the stake grid drawn over the field, every stake labelled with its cut or fill, then a table of all of them.
@@ -3705,7 +3728,7 @@ async function pdfReport() {
     doc.addPage(); y = M;
     const b = [field.g.xmin, field.g.ymin, field.g.xmax, field.g.ymax], im = await stormPeakImage(run);
     text(`Storm on the map: ${run.S.name.replace(/·/g, '-')}`, M, y + 6, 14, 'bold'); y += 14;
-    const lines = doc.splitTextToSize(stormPeakText().replace(/<[^>]+>/g, '') + `. Ground: ${$('mGround').selectedOptions[0].text}; field edge: ${$('mEdge').selectedOptions[0].text}; soak-in ${uRate(+$('mSoak').value)}.`, PW);
+    const lines = doc.splitTextToSize(stormPeakText().replace(/<[^>]+>/g, '') + '. ' + frameBudget(run, run.stats.length - 1).replace(/<[^>]+>/g, '').replace(/ \(the main ones are labelled on the map\)/, ' (main ones labelled)').replace(/: press More rain.*$/, '.') + ` Ground: ${$('mGround').selectedOptions[0].text}; field edge: ${$('mEdge').selectedOptions[0].text}; soak-in ${uRate(+$('mSoak').value)}.`, PW);
     text(lines.join('\n'), M, y + 6, 8.5, 'normal', [90, 90, 90]); y += 11 * lines.length + 10;
     const h = Math.min(520, PW * im.h / im.w), w = h * im.w / im.h;
     doc.addImage(im.url, 'JPEG', M + (PW - w) / 2, y, w, h); y += h + 12;
@@ -3901,19 +3924,19 @@ class FlowSim {
   constructor(nx, ny, cell, inF) {
     const n = nx * ny;
     Object.assign(this, { nx, ny, cell, inF, n, edge: 'open', z: new Float32Array(n), d: new Float32Array(n),
-      qx: new Float32Array(n), qy: new Float32Array(n), bq: new Float32Array(n), lim: new Float32Array(n) });
+      qx: new Float32Array(n), qy: new Float32Array(n), bq: new Float32Array(n), lim: new Float32Array(n), offCell: new Float32Array(n) });
     this.fieldCells = inF.reduce((a, v) => a + v, 0) || 1;
     this.reset();
   }
-  reset() { this.d.fill(0); this.qx.fill(0); this.qy.fill(0); this.bq.fill(0); Object.assign(this, { t: 0, rained: 0, soaked: 0, off: 0, on: 0, vmax: 0, hmax: 0 }); }
+  reset() { this.d.fill(0); this.qx.fill(0); this.qy.fill(0); this.bq.fill(0); this.offCell.fill(0); Object.assign(this, { t: 0, rained: 0, soaked: 0, off: 0, on: 0, vmax: 0, hmax: 0 }); }
   // the longest stable step for the deepest water on the ground
   dtMax() { return Math.min(10, 0.7 * this.cell / Math.sqrt(GRAV * Math.max(this.hmax, 0.003))); }
   step(dt, rain, soak) {
-    const { nx, ny, z, d, qx, qy, bq, lim, inF, cell, edge, n } = this, A = cell * cell, n2 = MANNING * MANNING;
+    const { nx, ny, z, d, qx, qy, bq, lim, inF, cell, edge, n, offCell } = this, A = cell * cell, n2 = MANNING * MANNING, soakArr = typeof soak === 'number' ? null : soak;
     for (let i = 0; i < n; i++) {                                   // rain and soak-in
       if (edge !== 'open' && !inF[i]) continue;
       if (rain) { d[i] += rain * dt; if (inF[i]) this.rained += rain * dt; }
-      if (soak && d[i] > 0) { const s = Math.min(d[i], soak * dt); d[i] -= s; if (inF[i]) this.soaked += s; }
+      if ((soakArr || soak) && d[i] > 0) { const s = Math.min(d[i], (soakArr ? soakArr[i] : soak) * dt); d[i] -= s; if (inF[i]) this.soaked += s; }
     }
     let vmax = 0;
     const gdt = GRAV * dt, fric = GRAV * dt * n2, drainEdge = edge === 'drain', berm = edge === 'berm';
@@ -3963,11 +3986,11 @@ class FlowSim {
       d[i] += (west - qx[i] + north - qy[i] - bq[i]) * dt / cell;
       if (d[i] < 0) d[i] = 0;
       if (inF[i]) {
-        if (bq[i]) this.off += bq[i] * dt * cell / A;
-        if (c < nx - 1 && !inF[i + 1]) { const v = qx[i] * dt * cell / A; v > 0 ? this.off += v : this.on -= v; }
-        if (c > 0 && !inF[i - 1]) { const v = qx[i - 1] * dt * cell / A; v < 0 ? this.off -= v : this.on += v; }
-        if (i + nx < n && !inF[i + nx]) { const v = qy[i] * dt * cell / A; v > 0 ? this.off += v : this.on -= v; }
-        if (i >= nx && !inF[i - nx]) { const v = qy[i - nx] * dt * cell / A; v < 0 ? this.off -= v : this.on += v; }
+        if (bq[i]) { this.off += bq[i] * dt * cell / A; offCell[i] += bq[i] * dt * cell; }       // offCell: m³ that left the field from this cell
+        if (c < nx - 1 && !inF[i + 1]) { const v = qx[i] * dt * cell / A; if (v > 0) { this.off += v; offCell[i] += v * A; } else this.on -= v; }
+        if (c > 0 && !inF[i - 1]) { const v = qx[i - 1] * dt * cell / A; if (v < 0) { this.off -= v; offCell[i] -= v * A; } else this.on += v; }
+        if (i + nx < n && !inF[i + nx]) { const v = qy[i] * dt * cell / A; if (v > 0) { this.off += v; offCell[i] += v * A; } else this.on -= v; }
+        if (i >= nx && !inF[i - nx]) { const v = qy[i - nx] * dt * cell / A; if (v < 0) { this.off -= v; offCell[i] -= v * A; } else this.on += v; }
       } else if (edge === 'drain') d[i] = 0;                            // left the field: gone
       if (d[i] > hmax) hmax = d[i];
     }
@@ -4197,7 +4220,7 @@ function updateWater(v) {
 function flowStats() {
   const act = activeViews(), n = act[0].sim.fieldCells, storm = +$('rLen').value * 60, edge = $('rEdge').value, A = flow.cell * flow.cell, t = act[0].sim.t;
   const rows = [['Rain fallen', v => uDepth(v.sim.rained / n)], ['On the field', v => uDepth(v.stored / n)], ['Deepest', v => uDepth(v.peak, 1)],
-    ['Soaked in', v => uDepth(v.sim.soaked / n)], ['Ran off', v => edge === 'berm' ? 'none' : uDepth(v.sim.off / n)],
+    ['Soaked in', v => uDepth(v.sim.soaked / n)], ['Ran off', v => edge === 'berm' ? 'none' : `${uDepth(v.sim.off / n)} · ${uWater(v.sim.off * A)}`],
     ...(edge === 'open' ? [['Ran on', v => uDepth(v.sim.on / n)]] : []), [`Wet ≥${uDepth(0.0254, 0)}`, v => uArea(v.wet * A, 2)], ['Fastest', v => uSpeed(v.sim.vmax)]];
   $('flowstats').innerHTML = `<b>${t < storm ? 'Raining' : 'Storm over'} · ${fmtClock(t)}</b><table>` +
     (act.length > 1 ? `<tr><td></td>${act.map(v => `<th>${v.label}</th>`).join('')}</tr>` : '') +
@@ -4268,17 +4291,18 @@ function playMapStorm() {
   stopMapStorm();
   const { g } = field, { f, nx, ny } = flowDims(g), G = flowGrids(g, f, nx, ny), cell = g.gc * f, S = stormSettings();
   const sim = new FlowSim(nx, ny, cell, G.inF); sim.edge = $('mEdge').value; sim.z.set($('mGround').value === 'design' ? G.zDe : G.zEx);
+  const zs = zoneSoak(G, f, nx, ny, S.soak), soak = zs || S.soak;
   const end = S.len + Math.max(1800, S.len * 0.5), every = Math.max(60, Math.round(end / 120 / 60) * 60);   // a frame every minute or so
   const cv = document.createElement('canvas'); cv.width = nx; cv.height = ny;
   const bounds = L.latLngBounds(unproj(g.xmin, g.ymax - ny * f * g.cs), unproj(g.xmin + nx * f * g.cs, g.ymax));
   const ov = L.imageOverlay(cv.toDataURL(), bounds, { pane: 'field', opacity: 1, interactive: false, className: 'storm-ov' }).addTo(map);
-  const run = mapStorm.run = { sim, cv, ov, nx, ny, cell, S, end, every, frames: [], stats: [], peak: new Float32Array(nx * ny), peakT: new Float32Array(nx * ny), me: field, follow: true, done: false, G };
+  const run = mapStorm.run = { sim, cv, ov, nx, ny, cell, S, end, every, zoneSoak: !!zs, lastLabel: 0, frames: [], stats: [], peak: new Float32Array(nx * ny), peakT: new Float32Array(nx * ny), me: field, follow: true, done: false, G };
   field.layers.storm = ov;
   const record = () => {
     const fr = new Uint16Array(nx * ny);
     for (let i = 0; i < fr.length; i++) { const d = sim.d[i]; fr[i] = Math.min(65535, Math.round(d * 1000)); if (d > run.peak[i]) { run.peak[i] = d; run.peakT[i] = sim.t; } }
     let wet = 0, stored = 0; for (let i = 0; i < fr.length; i++) if (G.inF[i]) { stored += sim.d[i]; if (sim.d[i] >= 0.0254) wet++; }
-    run.frames.push(fr); run.stats.push({ t: sim.t, wetAc: wet * cell * cell / ACRE_M2, onField: stored / sim.fieldCells, off: sim.off / sim.fieldCells, on: sim.on / sim.fieldCells, rained: sim.rained / sim.fieldCells });
+    run.frames.push(fr); run.stats.push({ t: sim.t, wetAc: wet * cell * cell / ACRE_M2, onField: stored / sim.fieldCells, off: sim.off / sim.fieldCells, on: sim.on / sim.fieldCells, rained: sim.rained / sim.fieldCells, soaked: sim.soaked / sim.fieldCells });
   };
   record();
   $('mPlay').textContent = '■ Stop'; $('stormTimeRow').classList.remove('hidden');
@@ -4288,13 +4312,14 @@ function playMapStorm() {
     while (performance.now() - t0 < 16 && sim.t < end) {
       const raining = sim.t < S.len, next = run.frames.length * every;
       const dt = Math.min(sim.dtMax(), next - sim.t, raining ? S.len - sim.t : 1e9);
-      sim.step(Math.max(0.05, dt), raining ? S.rate : 0, S.soak);
+      sim.step(Math.max(0.05, dt), raining ? S.rate : 0, soak);
       if (sim.t >= next - 1e-6) record();
     }
+    if (performance.now() - run.lastLabel > 1500 || sim.t >= end) { drawOutletLabels(run); run.lastLabel = performance.now(); }
     $('mTime').max = run.frames.length - 1;
     if (run.follow) { $('mTime').value = run.frames.length - 1; showStormFrame(run.frames.length - 1); }
     if (sim.t < end) requestAnimationFrame(tick);
-    else { run.done = true; $('mPlay').textContent = '▶ Run again'; stormSummary(); }
+    else { run.done = true; $('mPlay').textContent = '▶ Run again'; drawOutletLabels(run); showStormFrame(+$('mTime').value); stormSummary(); }
   };
   requestAnimationFrame(tick);
 }
@@ -4304,6 +4329,7 @@ function showStormFrame(k) {
   paintDepth(run.cv.getContext('2d'), run.nx, run.ny, peak ? i => run.peak[i] : i => fr[i] / 1000);
   run.ov.setUrl(run.cv.toDataURL());
   $('oTime').textContent = peak ? 'deepest' : fmtClock(st.t);
+  $('mBudget').innerHTML = frameBudget(run, peak ? run.stats.length - 1 : k);
   $('mStats').innerHTML = peak ? stormPeakText() :
     `<b>${st.t < run.S.len ? 'Raining' : 'Storm over'} · ${fmtClock(st.t)}</b> · rain ${uDepth(st.rained)} · on the field ${uDepth(st.onField)} · ran off ${uDepth(st.off)}` +
     (st.on >= 0.0003 && $('mEdge').value === 'open' ? ` · ran on ${uDepth(st.on)}` : '') + ` · ${uAc(st.wetAc, 2)} under ${depthLabel(2)} or more`;
@@ -4317,8 +4343,8 @@ function stormPeakText() {
 function stormSummary() { if ($('mPeak').checked) showStormFrame(0); }
 function stopMapStorm() {
   const run = mapStorm.run; mapStorm.run = null;
-  if (run) { run.ov.remove(); if (field?.layers.storm === run.ov) field.layers.storm = null; }
-  $('mPlay').textContent = '▶ Play the storm'; $('stormTimeRow').classList.add('hidden'); $('mStats').textContent = '';
+  if (run) { run.ov.remove(); run.outLayer?.remove(); if (field?.layers.storm === run.ov) field.layers.storm = null; }
+  $('mPlay').textContent = '▶ Play the storm'; $('stormTimeRow').classList.add('hidden'); $('mStats').textContent = ''; $('mBudget').innerHTML = '';
 }
 $('mPlay').onclick = () => { if (mapStorm.run && !mapStorm.run.done) { stopMapStorm(); return; } playMapStorm(); };
 $('mClear').onclick = stopMapStorm;
@@ -4330,23 +4356,218 @@ function stormLegend() {
   $('oSoak').textContent = uRate(+$('mSoak').value);
 }
 stormLegend();
-onUnits.push(() => { stormLegend(); if (mapStorm.run) showStormFrame(+$('mTime').value); fillMapStorms(); });
+onUnits.push(() => { stormLegend(); if (mapStorm.run) { showStormFrame(+$('mTime').value); drawOutletLabels(mapStorm.run); } fillMapStorms(); applySoak(false); });
 // NOAA storms for this field, the same list as 3D; a 10-year 1-hour storm to start
 async function fillMapStorms() {
   if (!field) return;
   const sel = $('mStorm'), keep = sel.value;
-  sel.innerHTML = '<option value="2,1">Custom: 2 in in 1 hr</option>';
+  sel.innerHTML = `<option value="2,1">Custom: ${uDepth(0.0508, 0)} in 1 hr</option>`;
+  const every = everydayOptions(sel);
   try {
-    const q = await atlas14(L.latLngBounds(field.pts).getCenter());
+    const q = await atlas14(L.latLngBounds(field.pts).getCenter()), og = document.createElement('optgroup'); og.label = 'NOAA design storms';
     for (const [row, hrs, dl] of PF_DUR) for (const [col, yr] of PF_ARI) {
       const inch = parseFloat(q[row][col]); if (!isFinite(inch)) continue;
-      sel.add(new Option(`${yr}-yr ${dl} · ${uDepth(inch * 0.0254)}`, `${inch},${hrs}`));
+      og.append(new Option(`${yr}-yr ${dl} · ${uDepth(inch * 0.0254)}`, `${inch},${hrs}`));
     }
-    sel.options[0].text = `Custom: ${uDepth(0.0508, 0)} in 1 hr`;
-    sel.value = keep && [...sel.options].some(o => o.value === keep) ? keep : ([...sel.options].find(o => o.text.startsWith('10-yr 1-hr'))?.value || sel.options[0].value);
+    sel.append(og);
   } catch { sel.options[0].text += ' (NOAA storms unavailable)'; }
+  await every;
+  const has = v => [...sel.options].some(o => o.value === v);
+  sel.value = keep && has(keep) ? keep : (sel.querySelector('optgroup[data-every] option:nth-child(2)')?.value || [...sel.options].find(o => o.text.startsWith('10-yr 1-hr'))?.value || sel.options[0].value);
 }
 // soak-in from the soil survey: NRCS hydrologic groups' typical minimum infiltration rates, by share of the field
+
+// ── water budget: how much fell, soaked in, stayed and left, in gallons (or m³), with each outlet labelled ──
+const roundSig = v => { if (v < 100) return Math.round(v); const p = 10 ** (Math.floor(Math.log10(v)) - 2); return Math.round(v / p) * p; };   // 3 significant figures
+const uWater = m3 => metric ? `${fmt(m3 < 10 ? m3 : roundSig(m3), m3 < 10 ? 1 : 0)} m³` : `${fmt(roundSig(m3 * 264.172), 0)} gal`;
+// outflow cells grouped into outlets: cells within ~25 m of a bigger one join it
+function outletClusters(sim) {
+  const { nx, offCell } = sim, R = Math.max(2, Math.round(25 / sim.cell)), cells = [];
+  for (let i = 0; i < offCell.length; i++) if (offCell[i] > 0) cells.push(i);
+  cells.sort((a, b) => offCell[b] - offCell[a]);
+  const cl = [];
+  for (const i of cells) {
+    const c = i % nx, r = (i / nx) | 0, k = cl.findIndex(o => Math.abs(o.c - c) <= R && Math.abs(o.r - r) <= R);
+    if (k < 0) cl.push({ c, r, vol: offCell[i] }); else cl[k].vol += offCell[i];
+  }
+  return cl.sort((a, b) => b.vol - a.vol);
+}
+function waterBudget(sim) {
+  const A = sim.cell * sim.cell; let stored = 0;
+  for (let i = 0; i < sim.d.length; i++) if (sim.inF[i]) stored += sim.d[i];
+  const off = sim.off * A, all = outletClusters(sim), outlets = all.filter(o => o.vol >= Math.max(0.05, off * 0.02)).slice(0, 8);
+  return { rain: sim.rained * A, soaked: sim.soaked * A, stored: stored * A, off, on: sim.on * A, outlets, nOutlets: all.length, rainDepth: sim.rained / sim.fieldCells };
+}
+function budgetText(B, rateInHr, soakInHr, sofar) {
+  const tiny = Math.max(0.05, B.rain * 0.002), n = B.nOutlets;
+  let t = `<b>Water budget${sofar ? ' so far' : ''}</b>: ${uDepth(B.rainDepth)} of rain is ${uWater(B.rain)} on the field${field?.rings.length > 1 ? 's' : ''}. ` +
+    `${uWater(B.soaked)} soaked in, ${B.stored >= tiny ? uWater(B.stored) + ' is still on the ground' : 'none is left standing'}, and ` +
+    (B.off >= tiny ? `${uWater(B.off)} ran off through ${n} outlet${n > 1 ? 's' : ''} (the main ones are labelled on the map)` : 'nothing ran off') +
+    (B.on >= tiny ? `${B.off >= tiny ? ', counting' : '. That leaves out'} ${uWater(B.on)} that ran on from upslope${B.off >= tiny ? ' and passed through' : ''}.` : '.');
+  if (B.off < tiny && soakInHr != null && rateInHr <= soakInHr) t += ` Rain this light (${uRate(rateInHr)}) soaks in faster than it falls (${uRate(soakInHr)}): press <b>More rain</b> to find where runoff starts.`;
+  return t;
+}
+const outletLL = (o, f) => { const { g } = field; return unproj(g.xmin + (o.c + 0.5) * f * g.cs, g.ymax - (o.r + 0.5) * f * g.cs); };
+function drawOutletLabels(run) {
+  run.outLayer?.remove();
+  const B = waterBudget(run.sim), f = flowDims(field.g).f, grp = L.layerGroup();
+  const placed = [];
+  for (const o of B.outlets) {                                       // biggest first; skip a label that would sit on top of another
+    const pt = map.latLngToLayerPoint(outletLL(o, f)); if (placed.some(q => Math.abs(q.x - pt.x) < 90 && Math.abs(q.y - pt.y) < 24)) continue; placed.push(pt);
+    grp.addLayer(L.marker(outletLL(o, f), { interactive: false, zIndexOffset: 800, icon: L.divIcon({ className: '', iconSize: [0, 0], html: `<div class="olabel">${uWater(o.vol)}</div>` }) }));
+  }
+  run.outLayer = grp.addTo(map);
+  run.nOutlets = B.nOutlets;
+}
+// the budget at a frame of the storm (the time slider's moment); outlets as counted so far
+function frameBudget(run, k) {
+  const st = run.stats[k], A = run.cell * run.cell * run.sim.fieldCells;
+  const B = { rainDepth: st.rained, rain: st.rained * A, soaked: st.soaked * A, stored: st.onField * A, off: st.off * A, on: st.on * A, nOutlets: run.nOutlets || 0 };
+  return budgetText(B, run.S.inch / run.S.hrs, run.zoneSoak ? null : run.S.soak / 0.0254 * 3600, k < run.stats.length - 1 || !run.done);
+}
+
+// ── everyday rain by month: 30 years of hourly weather history at the field (Open-Meteo, from ERA5) ──
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const CLIM_KEY = 'fieldlines.rainclim.v3';
+const climLoads = new Map();
+function rainClimate(ll) {
+  const key = ll.lat.toFixed(1) + ',' + ll.lng.toFixed(1);
+  let cache = {}; try { cache = JSON.parse(localStorage.getItem(CLIM_KEY) || '{}'); } catch { /* fresh */ }
+  if (cache[key]) return Promise.resolve(cache[key]);
+  if (climLoads.has(key)) return climLoads.get(key);
+  const p = (async () => {
+    const end = new Date().getFullYear() - 1, start = end - 29;
+    const r = await fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${ll.lat.toFixed(3)}&longitude=${ll.lng.toFixed(3)}&start_date=${start}-01-01&end_date=${end}-12-31&hourly=precipitation&timezone=auto&timeformat=unixtime`);
+    if (!r.ok) throw new Error('Weather history unavailable');
+    const j = await r.json(), t = j.hourly.time, pr = j.hourly.precipitation, off = j.utc_offset_seconds || 0;
+    const days = new Map();                                          // local day → [total mm, wet hours]
+    for (let i = 0; i < t.length; i++) { const d = Math.floor((t[i] + off) / 86400); let e = days.get(d); if (!e) days.set(d, e = [0, 0]); const v = pr[i] || 0; e[0] += v; if (v >= 0.1) e[1]++; }
+    const M = Array.from({ length: 12 }, () => ({ wet: [], top: new Map() }));
+    for (const [d, [tot, hrs]] of days) {
+      if (tot < 1) continue;                                         // a rainy day: at least 1 mm
+      const dt = new Date(d * 86400000), m = M[dt.getUTCMonth()], y = dt.getUTCFullYear();
+      m.wet.push([tot, hrs]); const cur = m.top.get(y); if (!cur || tot > cur[0]) m.top.set(y, [tot, hrs]);
+    }
+    const q = (a, f) => { const s = [...a].sort((x, y) => x - y); return s.length ? s[Math.min(s.length - 1, Math.floor(s.length * f))] : 0; };
+    const r1 = v => Math.round(v * 10) / 10, nYears = end - start + 1;
+    const months = M.map(m => {
+      if (!m.wet.length) return null;
+      const wetTop = [...m.top.values()], top = [...wetTop, ...Array(Math.max(0, nYears - wetTop.length)).fill([0, 0])];   // dry years count as zero
+      const hrsOf = a => Math.max(1, Math.round(q(a.filter(w => w[0] > 0).map(w => w[1]), 0.5)));
+      return { wetDays: r1(m.wet.length / (end - start + 1)), normal: [r1(q(m.wet.map(w => w[0]), 0.5)), hrsOf(m.wet)],
+        most: [r1(q(top.map(w => w[0]), 0.5)), hrsOf(top)], five: [r1(q(top.map(w => w[0]), 0.8)), hrsOf(top)] };
+    });
+    const d0 = dayNum(`${start}-01-01`), daily = new Array(dayNum(`${end}-12-31`) - d0 + 1).fill(0);   // each day's rain, mm
+    for (const [d, [tot]] of days) if (d >= d0 && d - d0 < daily.length) daily[d - d0] = r1(tot);
+    const out = { months, years: `${start}–${end}`, from: start, to: end, daily };
+    const keys = Object.keys(cache); while (keys.length > 5) delete cache[keys.shift()];
+    cache[key] = out; try { localStorage.setItem(CLIM_KEY, JSON.stringify(cache)); } catch { /* storage full */ }
+    return out;
+  })();
+  climLoads.set(key, p); p.catch(() => climLoads.delete(key));
+  return p;
+}
+// the everyday-rain group in a storm list, for the chosen month
+async function everydayOptions(sel) {
+  if (!field) return;
+  const me = field, month = +$('mMonth').value, clim = await rainClimate(L.latLngBounds(field.pts).getCenter()).catch(() => null);
+  if (field !== me) return;
+  const was = sel.selectedOptions[0], wasEvery = was?.dataset.every ? [...sel.querySelectorAll('optgroup[data-every] option')].indexOf(was) : -1, keepVal = sel.value;
+  sel.querySelector('optgroup[data-every]')?.remove();
+  const m = clim?.months[month]; if (!m) { $('mClimNote').textContent = clim ? '' : 'Everyday rain is unavailable right now (weather history didn\'t load).'; return; }
+  const name = MONTHS[month], og = document.createElement('optgroup'); og.label = `Everyday rain in ${name}`; og.dataset.every = '1';
+  for (const [label, [mm, hr]] of [[`A normal rainy day in ${name}`, m.normal], [`The biggest rain most ${name}s`, m.most], [`About once in 5 ${name}s`, m.five]]) {
+    if (!(mm >= 1)) continue;                                        // e.g. most Julys in a dry climate get no rain at all
+    const o = new Option(`${label} · ${uDepth(mm / 1000)} over ${hr} hr`, `${(mm / 25.4).toFixed(3)},${hr}`); o.dataset.every = '1'; og.append(o);
+  }
+  sel.insertBefore(og, sel.children[1] || null);
+  const opts = og.querySelectorAll('option');
+  if (wasEvery >= 0) sel.value = opts[Math.min(wasEvery, opts.length - 1)]?.value ?? sel.options[0].value;   // same kind of rain, new month
+  else if ([...sel.options].some(o => o.value === keepVal)) sel.value = keepVal;
+  $('mClimNote').textContent = `Everyday rain: ${clim.years} hourly weather history at this spot (Open-Meteo, ERA5), about ${fmt(m.wetDays, 0)} rainy days in a typical ${name}. It's averaged over ~10 km, so it under-reads local downpours; NOAA's storms are the guide for big events.`;
+}
+$('mMonth').innerHTML = MONTHS.map((m, k) => `<option value="${k}">${m}</option>`).join('');
+$('mMonth').value = new Date().getMonth();
+$('mMonth').onchange = async () => { await everydayOptions($('mStorm')); everydayOptions($('rStorm')); };
+// step up to the next bigger rain in the list and play it
+$('mMore').onclick = () => {
+  const soak = +$('mSoak').value, excess = v => { const [inch, hrs] = v.split(',').map(Number); return [Math.max(0, inch - soak * hrs), inch]; };   // rain that can't soak in, then depth
+  const opts = [...$('mStorm').options].filter(o => o.value).map(o => ({ o, k: excess(o.value) })).sort((a, b) => a.k[0] - b.k[0] || a.k[1] - b.k[1]);
+  const cur = excess($('mStorm').value || '0,1');   // the next storm that should shed more water; if none, the next deeper one
+  const next = opts.find(x => x.k[0] > cur[0] + 1e-9) || opts.find(x => Math.abs(x.k[0] - cur[0]) < 1e-9 && x.k[1] > cur[1] + 1e-9);
+  if (!next) return setStatus('That\'s the biggest rain in the list.');
+  $('mStorm').value = next.o.value; playMapStorm();
+};
+
+// ── soak-in from texture and organic matter: Saxton & Rawls (2006) saturated conductivity ──
+// sand and clay %, organic matter % by weight → mm/h. Halved for a worked field (crusting, compaction).
+function ksatSR(sandPct, clayPct, om) {
+  const S = sandPct / 100, C = clayPct / 100, OM = Math.min(8, Math.max(0, om));
+  const t1500t = -0.024 * S + 0.487 * C + 0.006 * OM + 0.005 * S * OM - 0.013 * C * OM + 0.068 * S * C + 0.031, t1500 = t1500t + (0.14 * t1500t - 0.02);
+  const t33t = -0.251 * S + 0.195 * C + 0.011 * OM + 0.006 * S * OM - 0.027 * C * OM + 0.452 * S * C + 0.299, t33 = t33t + (1.283 * t33t * t33t - 0.374 * t33t - 0.015);
+  const ts33t = 0.278 * S + 0.034 * C + 0.022 * OM - 0.018 * S * OM - 0.027 * C * OM - 0.584 * S * C + 0.078, ts33 = ts33t + (0.636 * ts33t - 0.107);
+  const tS = t33 + ts33 - 0.097 * S + 0.043, B = (Math.log(1500) - Math.log(33)) / (Math.log(t33) - Math.log(t1500));
+  return 1930 * Math.pow(Math.max(0, tS - t33), 3 - 1 / B);
+}
+const FIELD_FACTOR = 0.5;
+const soakFor = om => field?.texture ? ksatSR(field.texture.sand, field.texture.clay, om) * FIELD_FACTOR / 25.4 : null;   // in/hr
+// texture of the top soil layer, from the soil survey's main component in each map unit, by area
+async function loadFieldTexture(me) {
+  const one = pts => {
+    const ring = [...pts, pts[0]].map(p => `${p.lng.toFixed(6)} ${p.lat.toFixed(6)}`).join(', ');
+    return sdaQuery(`~DeclareGeometry(@aoi)~
+SELECT @aoi = geometry::STPolyFromText('POLYGON((${ring}))', 4326).MakeValid()
+SELECT M.a, C.comppct_r, H.sandtotal_r, H.claytotal_r, H.om_r
+FROM (SELECT P.mukey, SUM(P.mupolygongeo.STIntersection(@aoi).STArea()) AS a FROM mupolygon P WHERE P.mupolygongeo.STIntersects(@aoi) = 1 GROUP BY P.mukey) M
+INNER JOIN component C ON C.mukey = M.mukey INNER JOIN chorizon H ON H.cokey = C.cokey
+WHERE C.majcompflag = 'Yes' AND H.hzdept_r = (SELECT MIN(H2.hzdept_r) FROM chorizon H2 WHERE H2.cokey = C.cokey AND H2.sandtotal_r IS NOT NULL)`);
+  };
+  const rows = (await Promise.all(me.rings.map(one))).flat();
+  let w = 0, s = 0, c = 0, o = 0, wo = 0;
+  for (const r of rows) {
+    const wt = +r.a * (+r.comppct_r || 0); if (!(wt > 0) || r.sandtotal_r == null || r.claytotal_r == null) continue;
+    w += wt; s += wt * +r.sandtotal_r; c += wt * +r.claytotal_r; if (r.om_r != null) { o += wt * +r.om_r; wo += wt; }
+  }
+  if (field !== me || !w) return;
+  me.texture = { sand: s / w, clay: c / w, om: wo ? o / wo : 2 };
+  setOMFromRecords(); applySoak();
+}
+// organic matter for the storm: the field's soil tests if they have it, otherwise the soil survey's
+function testOM() {
+  const plan = currentPlan(), zs = plan?.zones.filter(z => z.results.om !== '' && z.results.om != null && isFinite(+z.results.om)) || [];
+  if (!zs.length) return null;
+  const a = zs.reduce((t, z) => t + z.acres, 0); return zs.reduce((t, z) => t + +z.results.om * z.acres, 0) / a;
+}
+function setOMFromRecords() {
+  if (!field?.texture) return;
+  const t = testOM();
+  $('mOM').value = (t ?? field.texture.om).toFixed(1);
+  $('mOMsrc').textContent = t != null ? 'from your soil tests' : 'from the soil survey';
+  $('mZoneRow').classList.toggle('hidden', t == null);
+}
+const soakRound = v => Math.min(3, Math.max(0.01, Math.round(v * 100) / 100));
+function applySoak(setRate = true) {
+  const T = field?.texture; if (!T) return;
+  $('omRow').classList.remove('hidden');
+  const typed = parseFloat($('mOM').value), om = Math.max(0, isFinite(typed) ? typed : T.om), v = soakRound(soakFor(om));
+  if (setRate) { $('mSoak').value = v; $('rInfil').value = v; }
+  $('oSoak').textContent = uRate(+$('mSoak').value);
+  const more = soakRound(soakFor(om + 2));
+  $('mSoakNote').innerHTML = `Soak-in from the soil survey's texture (sand ${fmt(T.sand, 0)}%, clay ${fmt(T.clay, 0)}%) and ${fmt(om, 1)}% organic matter, using Saxton &amp; Rawls (2006), ` +
+    `halved for a worked field. With 2 points more organic matter it would be <b>${uRate(more)}</b>. Lower it for wet or crusted ground.`;
+  if (flow) syncFlowUI();
+}
+$('mOM').addEventListener('input', applySoak);
+// each sampling zone's organic matter, cell by cell, for the map storm
+function zoneSoak(G, f, nx, ny, base) {
+  const plan = currentPlan(); if (!$('mZoneOM').checked || !plan || !zoneGrid || zoneGrid.key !== fieldKey() || !field.texture) return null;
+  const { g } = field, perZone = plan.zones.map(z => z.results.om !== '' && isFinite(+z.results.om) ? soakFor(+z.results.om) * 0.0254 / 3600 : base);
+  const out = new Float32Array(nx * ny).fill(base);
+  for (let r = 0; r < ny; r++) for (let c = 0; c < nx; c++) { const z = zoneGrid.lab[(r * f + (f >> 1)) * g.W + c * f + (f >> 1)]; if (z >= 0) out[r * nx + c] = perZone[z]; }
+  return out;
+}
+onSoils.push(me => loadFieldTexture(me).catch(() => {}));
+
 const HSG_RATE = { A: 0.4, B: 0.22, C: 0.1, D: 0.04 };
 function soilSoakRate(soils) {
   let w = 0, s = 0;
@@ -4357,8 +4578,8 @@ function soilSoakRate(soils) {
   return w ? s / w : null;
 }
 onSoils.push(me => {
-  const r = soilSoakRate(me.soils); if (r == null) return;
-  const v = Math.round(r * 20) / 20;
+  const r = soilSoakRate(me.soils); if (r == null || me.texture) return;
+  const v = Math.round(r * 100) / 100;
   $('mSoak').value = v; $('rInfil').value = v; $('oSoak').textContent = uRate(v);
   $('mSoakNote').textContent = `Soak-in set from the soil survey (mostly hydrologic group ${me.soils[0]?.hsg || '–'}). Lower it for wet or crusted ground.`;
   if (flow) syncFlowUI();
@@ -4395,13 +4616,14 @@ async function loadStorms() {
       o.title = `NOAA Atlas 14: ${uDepth(inch * 0.0254)} in ${dl}, a ${100 / yr}% chance each year. Spread evenly over the storm.`;
       sel.add(o);
     }
-    sel.value = keep;
   } catch (e) { sel.options[0].text = 'Custom (NOAA storms unavailable)'; }
+  await everydayOptions(sel);
+  if (keep && [...sel.options].some(o => o.value === keep)) sel.value = keep;
 }
 $('rStorm').onchange = e => {
   if (!e.target.value) return;
   const [inch, hrs] = e.target.value.split(',').map(Number);
-  $('rRate').value = Math.max(0.05, inch / hrs).toFixed(2); $('rLen').value = hrs * 60;
+  $('rRate').value = Math.max(0.005, inch / hrs).toFixed(3); $('rLen').value = hrs * 60;
   syncFlowUI(); resetFlow();
 };
 $('flowPlay').onclick = () => { flow.running = !flow.running; $('flowPlay').textContent = flow.running ? 'Pause' : 'Resume'; };
@@ -4508,7 +4730,7 @@ onUnits.push(() => { if ($('traceOut').innerHTML) $('traceOut').innerHTML = '<p 
 // Kept in this browser like pins. Each block remembers what the lidar says about its ground, so harvests can be
 // read against it ("the wet blocks yielded less"), and soil sampling zones come from the same ground.
 const REC_KEY = 'fieldlines.records.v1';
-const rec = (() => { try { const r = JSON.parse(localStorage.getItem(REC_KEY)); if (r?.blocks) return { soil: {}, ...r }; } catch { /* fresh */ } return { blocks: [], harvests: [], soil: {} }; })();
+const rec = (() => { try { const r = JSON.parse(localStorage.getItem(REC_KEY)); if (r?.blocks) return { soil: {}, water: [], ...r }; } catch { /* fresh */ } return { blocks: [], harvests: [], soil: {}, water: [] }; })();
 const saveRec = () => { try { localStorage.setItem(REC_KEY, JSON.stringify(rec)); } catch { /* storage full */ } };
 const BLOCK_COL = '#7ed957';
 const recLayers = { blocks: null, zones: null, samples: null };
@@ -4611,24 +4833,28 @@ function lotCode(b, date) {
 function openLogFor(id) {
   setPane('records'); $('hBlock').value = id;
   const b = blockById(id); if (b?.crop && !$('hCrop').value) $('hCrop').value = b.crop;
+  fillPlanted();
   $('hAmount').focus();
 }
 $('hSave').onclick = () => {
   const b = blockById($('hBlock').value), amount = parseFloat($('hAmount').value);
   if (!b) return setStatus('Pick a block first (draw one, or lay out blocks from the field).', true);
   if (!(amount > 0)) return setStatus('Enter how much was harvested.', true);
-  const date = $('hDate').value || today(), crop = $('hCrop').value.trim() || b.crop || 'Crop';
+  const date = $('hDate').value || today(), crop = $('hCrop').value.trim() || b.crop || 'Crop', planted = $('hPlanted').value;
+  if (planted && planted > date) return setStatus('The planting date is after the harvest date.', true);
   const h = { id: uid(), block: b.id, date, crop, amount, unit: $('hUnit').value, lot: lotCode(b, date), note: $('hNote').value.trim() };
+  if (planted) h.planted = planted;
+  b.plantedBy = { ...b.plantedBy, [crop]: planted || undefined };                 // the next harvest of this crop here starts from the same planting
   rec.harvests.push(h); if (!b.crop) b.crop = crop; saveRec();
-  $('hAmount').value = ''; $('hNote').value = '';
-  setStatus(`Logged ${fmt(amount, amount % 1 ? 1 : 0)} ${h.unit} of ${crop} from ${b.name}. Lot code ${h.lot}.`);
+  $('hAmount').value = ''; $('hNote').value = ''; $('hPlanted').dataset.auto = planted ? '1' : '';
+  setStatus(`Logged ${fmt(amount, amount % 1 ? 1 : 0)} ${h.unit} of ${crop} from ${b.name}${planted ? ', planted ' + dayLabel(dayNum(planted)) : ''}. Lot code ${h.lot}.`);
   renderRecords();
 };
 function harvestCSV() {
-  const rows = ['date,block,crop,amount,unit,lot_code,notes,block_lat,block_lon,block_' + unitKeys().area];
+  const rows = ['date,block,crop,amount,unit,lot_code,notes,block_lat,block_lon,block_' + unitKeys().area + ',planted'];
   for (const h of [...rec.harvests].sort((a, b) => a.date.localeCompare(b.date))) {
     const b = blockById(h.block), c = b ? L.latLngBounds(b.pts).getCenter() : null, q = s => `"${String(s ?? '').replace(/"/g, '""')}"`;
-    rows.push([h.date, q(b?.name), q(h.crop), h.amount, h.unit, h.lot, q(h.note), c?.lat.toFixed(6) ?? '', c?.lng.toFixed(6) ?? '', b ? areaN(blockArea(b)).toFixed(3) : ''].join(','));
+    rows.push([h.date, q(b?.name), q(h.crop), h.amount, h.unit, h.lot, q(h.note), c?.lat.toFixed(6) ?? '', c?.lng.toFixed(6) ?? '', b ? areaN(blockArea(b)).toFixed(3) : '', h.planted || ''].join(','));
   }
   return rows.join('\n');
 }
@@ -4648,27 +4874,210 @@ function yieldSummary() {
   for (const h of hs) if (h.unit === unit) { const b = blockById(h.block); if (b) byBlock.set(b.id, (byBlock.get(b.id) || 0) + h.amount); }
   for (const [id, tot] of byBlock) byBlock.set(id, tot / blockArea(blockById(id)) * per);
   const vals = [...byBlock.values()];
-  return { crop, unit, unitLabel, byBlock, min: Math.min(...vals), max: Math.max(...vals), mean: vals.reduce((a, b) => a + b, 0) / vals.length, skipped: hs.filter(h => h.unit !== unit).length };
+  return { crop, unit, unitLabel, per, byBlock, min: Math.min(...vals), max: Math.max(...vals), mean: vals.reduce((a, b) => a + b, 0) / vals.length, skipped: hs.filter(h => h.unit !== unit).length };
 }
-// plain-language reading: which ground property lines up with yield, comparing the top and bottom thirds of blocks
-function yieldInsight(sum) {
-  const rows = [...sum.byBlock].map(([id, y]) => ({ b: blockById(id), y })).filter(r => r.b?.ground);
-  if (rows.length < 3) return rows.length ? 'Log harvests from at least 3 blocks to compare them with the ground.' : '';
-  const props = [['wet', 'Wetter', 'drier'], ['pondPct', 'Blocks that pond', 'ones that don\'t'], ['slope', 'Steeper', 'flatter'], ['z', 'Higher', 'lower']];
+// ── patterns, read cautiously ──
+// A correlation only counts when it's strong for the number of records behind it: Fisher's z of at least 2.5, a bar set high
+// because several properties are tried at once. Below 5 records nothing is called a pattern.
+const MIN_PATTERN = 5;
+function strongestLink(rows, props) {
   let best = null;
   for (const [k, hi, lo] of props) {
-    const xs = rows.map(r => r.b.ground[k]), mx = xs.reduce((a, b) => a + b, 0) / xs.length, my = rows.reduce((a, r) => a + r.y, 0) / rows.length;
-    const sxy = rows.reduce((a, r, i) => a + (xs[i] - mx) * (r.y - my), 0), sxx = xs.reduce((a, x) => a + (x - mx) ** 2, 0), syy = rows.reduce((a, r) => a + (r.y - my) ** 2, 0);
+    const rs = rows.filter(r => isFinite(r.x[k])), n = rs.length; if (n < MIN_PATTERN) continue;
+    const mx = rs.reduce((a, r) => a + r.x[k], 0) / n, my = rs.reduce((a, r) => a + r.y, 0) / n;
+    let sxy = 0, sxx = 0, syy = 0; for (const r of rs) { sxy += (r.x[k] - mx) * (r.y - my); sxx += (r.x[k] - mx) ** 2; syy += (r.y - my) ** 2; }
     if (!sxx || !syy) continue;
-    const corr = sxy / Math.sqrt(sxx * syy);
-    if (!best || Math.abs(corr) > Math.abs(best.corr)) best = { k, hi, lo, corr };
+    const corr = sxy / Math.sqrt(sxx * syy), z = Math.atanh(Math.min(0.999, Math.abs(corr))) * Math.sqrt(n - 3);
+    if (!best || z > best.z) best = { k, hi, lo, corr, z, rs };
   }
-  if (!best || Math.abs(best.corr) < 0.5) return `No clear link between the ground and ${sum.crop} yield across these ${rows.length} blocks yet.`;
-  const sorted = rows.sort((a, b) => a.b.ground[best.k] - b.b.ground[best.k]), third = Math.max(1, Math.floor(sorted.length / 3));
-  const lowY = sorted.slice(0, third).reduce((a, r) => a + r.y, 0) / third, highY = sorted.slice(-third).reduce((a, r) => a + r.y, 0) / third;
-  const pct = (highY - lowY) / lowY * 100;
-  return `${best.hi} blocks yielded ${fmt(Math.abs(pct), 0)}% ${pct < 0 ? 'less' : 'more'} ${esc(sum.crop)} per area than ${best.lo} ones (${rows.length} blocks${$('ySeason').value ? ', ' + $('ySeason').value : ''}). A pattern, not proof: check it against what you saw in the field.`;
+  return best && best.z >= 2.5 ? best : null;
 }
+// "Wetter blocks yielded 30% less tomatoes per area than drier ones": top third against bottom third
+function thirdsLine(best, crop) {
+  const s = [...best.rs].sort((a, b) => a.x[best.k] - b.x[best.k]), t = Math.max(1, Math.floor(s.length / 3));
+  const lowY = s.slice(0, t).reduce((a, r) => a + r.y, 0) / t, highY = s.slice(-t).reduce((a, r) => a + r.y, 0) / t, pct = (highY - lowY) / lowY * 100;
+  return `${best.hi} yielded ${fmt(Math.abs(pct), 0)}% ${pct < 0 ? 'less' : 'more'} ${esc(crop)} per area than ${best.lo}`;
+}
+// soil-test results for a block: the zone most of its core spots fall in, or for a small bed the zone of the nearest spot within 40 m
+function soilAt(b) {
+  const c = L.latLngBounds(b.pts).getCenter(), ring = b.pts.map(p => ({ x: p[1], y: p[0] })), count = new Map();
+  let res = null, bd = 40, most = 0;
+  for (const plan of Object.values(rec.soil)) for (const pt of plan.points || []) {
+    const z = plan.zones[pt.zone]?.results; if (!z || !['om', 'pH'].some(k => z[k] !== '' && z[k] != null && isFinite(+z[k]))) continue;
+    if (inRing(ring, pt.lng, pt.lat)) { const n = (count.get(z) || 0) + 1; count.set(z, n); if (n > most) { most = n; res = z; } }
+    else if (!most) { const d = c.distanceTo([pt.lat, pt.lng]); if (d < bd) { bd = d; res = z; } }
+  }
+  const o = {}; if (res) for (const k of ['om', 'pH']) if (res[k] !== '' && res[k] != null && isFinite(+res[k])) o[k] = +res[k];
+  return o;
+}
+// which ground or soil property lines up with yield across blocks
+function yieldInsight(sum) {
+  const rows = [...sum.byBlock].map(([id, y]) => ({ b: blockById(id), y })).filter(r => r.b?.ground).map(r => ({ y: r.y, x: { ...r.b.ground, ...soilAt(r.b) } }));
+  if (rows.length < MIN_PATTERN) return rows.length ? `Log ${esc(sum.crop)} from at least ${MIN_PATTERN} blocks to compare them with the ground (${rows.length} so far).` : '';
+  const best = strongestLink(rows, [['wet', 'Wetter blocks', 'drier ones'], ['pondPct', 'Blocks that pond', 'ones that don\'t'], ['slope', 'Steeper blocks', 'flatter ones'], ['z', 'Higher blocks', 'lower ones'],
+    ['om', 'Blocks with more organic matter', 'ones with less'], ['pH', 'Higher-pH blocks', 'lower-pH ones']]);
+  if (!best) return `No clear link between the ground and ${esc(sum.crop)} yield across these ${rows.length} blocks yet. With this few, only a strong pattern would show.`;
+  return `${thirdsLine(best, sum.crop)} (${best.rs.length} blocks${$('ySeason').value ? ', ' + $('ySeason').value : ''}). A pattern, not proof: check it against what you saw in the field.`;
+}
+
+// ── weather at the farm: daily rain, evaporation and temperature from Open-Meteo (ERA5), with your own gauge and watering on top ──
+// The history is one reading for the whole farm, averaged over about 10 km, so it compares plantings and seasons, not beds.
+const WX_KEY = 'fieldlines.daily.v2', WX_VARS = 'precipitation_sum,et0_fao_evapotranspiration,temperature_2m_max,temperature_2m_min';
+const dayNum = s => Math.round(Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10)) / 864e5);
+const dayStr = d => new Date(d * 864e5).toISOString().slice(0, 10);
+const dayLabel = d => { const t = new Date(d * 864e5); return `${MONTHS[t.getUTCMonth()].slice(0, 3)} ${t.getUTCDate()}`; };
+const uRain = mm => metric ? fmt(mm, mm < 10 ? 1 : 0) + ' mm' : fmt(mm / 25.4, mm < 25.4 ? 2 : 1) + ' in';
+const wx = { key: '', data: null, clim: null, loading: null, failKey: '', failAt: 0 };
+function farmPoint() { return rec.blocks.length ? L.latLngBounds(rec.blocks.flatMap(b => b.pts)).getCenter() : null; }
+async function wxFetch(ll, from, to) {
+  const r = await fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${ll.lat.toFixed(3)}&longitude=${ll.lng.toFixed(3)}&start_date=${from}&end_date=${to}&daily=${WX_VARS}&timezone=auto`);
+  if (!r.ok) throw new Error('Weather history unavailable');
+  const d = (await r.json()).daily, r1 = v => v == null ? null : Math.round(v * 10) / 10;
+  return { start: d.time[0], p: d.precipitation_sum.map(r1), e: d.et0_fao_evapotranspiration.map(r1), tx: d.temperature_2m_max.map(r1), tn: d.temperature_2m_min.map(r1) };
+}
+// Weather for plantings: daily values from Jan 1 of the earliest planting year (up to 10 years back) to yesterday, fetched again
+// once a day. Open-Meteo counts long requests as many, so the normal-year rain reuses the storm tools' 30-year history instead.
+// A failed fetch falls back to the last copy and is tried again after 3 minutes.
+function loadWeather() {
+  const ll = farmPoint(); if (!ll) return;
+  const y = new Date().getFullYear(), from = Math.max(y - 10, Math.min(y, ...rec.harvests.filter(h => h.planted).map(h => +h.planted.slice(0, 4))));
+  const key = ll.lat.toFixed(1) + ',' + ll.lng.toFixed(1) + '|' + from;
+  if (wx.key === key && (wx.data || wx.loading)) return;
+  wx.key = key; wx.data = null; wx.clim = null;
+  if (wx.failKey === key && Date.now() - wx.failAt < 180000) return;
+  const job = (async () => {
+    let c = null; try { c = JSON.parse(localStorage.getItem(WX_KEY)); } catch { /* fresh */ }
+    const yest = dayStr(dayNum(today()) - 1);
+    let d = c?.key === key ? c.d : null;
+    if (!d || c.got !== today()) {
+      try { d = await wxFetch(ll, `${from}-01-01`, yest); try { localStorage.setItem(WX_KEY, JSON.stringify({ key, got: today(), d })); } catch { /* storage full */ } }
+      catch (e) { if (!d) throw e; }                                   // keep the last copy
+    }
+    const D = { start: dayNum(d.start), p: d.p, e: d.e, tx: d.tx, tn: d.tn };
+    D.end = D.start + D.p.length - 1; while (D.end > D.start && D.p[D.end - D.start] == null) D.end--;
+    if (key !== wx.key) return;
+    wx.data = D; renderRecords();
+    wx.clim = await rainClimate(ll).catch(() => null);               // usually cached already by the storm tools
+  })().catch(() => { wx.failKey = key; wx.failAt = Date.now(); }).finally(() => { if (wx.loading === job) wx.loading = null; renderRecords(); });
+  wx.loading = job;
+}
+// your gauge: a reading is the rain since the last one. From one reading to the next (up to a month apart) the gauge replaces
+// the history, and a first reading also covers the day before it (gauges are usually read the morning after)
+function waterIndex() {
+  const g = rec.water.filter(w => w.kind === 'rain').map(w => [dayNum(w.date), w.mm]).sort((a, b) => a[0] - b[0]), gauge = new Map(), spans = [];
+  for (const [d, mm] of g) { gauge.set(d, (gauge.get(d) || 0) + mm); const last = spans[spans.length - 1]; if (last && d - last[1] <= 31) last[1] = d; else spans.push([d - 1, d]); }
+  const irr = new Map(); for (const w of rec.water) if (w.kind === 'irr') { const k = dayNum(w.date) + '|' + w.block; irr.set(k, (irr.get(k) || 0) + w.mm); }
+  return { gauge, spans, irr };
+}
+function rainOn(d, W) {
+  if (W.gauge.has(d)) return W.gauge.get(d);
+  if (W.spans.some(s => d >= s[0] && d <= s[1])) return 0;
+  const D = wx.data; return D && d >= D.start && d <= D.end ? D.p[d - D.start] : null;
+}
+const irrOn = (d, block, W) => (W.irr.get(d + '|' + block) || 0) + (W.irr.get(d + '|') || 0);
+// one planting's weather, planting day to last harvest; null if over a tenth of the days are missing
+function plantingWeather(pl, W) {
+  const D = wx.data; if (!D) return null;
+  const d0 = dayNum(pl.planted), d1 = dayNum(pl.end), days = d1 - d0 + 1;
+  let rain = 0, irr = 0, et = 0, gdd = 0, run = 0, dry = 0, frost = 0, miss = 0;
+  for (let d = d0; d <= d1; d++) {
+    const i = d - D.start, p = rainOn(d, W), e = D.e[i], tx = D.tx[i], tn = D.tn[i];
+    if (p == null || e == null || tx == null || tn == null) { miss++; run = 0; continue; }
+    const ir = irrOn(d, pl.block, W), w = p + ir; rain += p; irr += ir; et += e;
+    const cl = t => Math.min(30, Math.max(10, t)); gdd += (cl(tx) + cl(tn)) / 2 - 10;   // heat units, 50/86 °F method
+    run = w < 2.5 ? run + 1 : 0; dry = Math.max(dry, run); if (tn <= 0) frost++;
+  }
+  if (miss > days * 0.1) return null;
+  const n = days - miss;
+  return { days, rain, irr, water: rain + irr, et, gdd, dry, frost, perWeek: (rain + irr) / n * 7, heatDay: gdd / n };
+}
+// plantings: harvests grouped by block, crop and planting date
+function plantingsOf(crop, unit, yr) {
+  const m = new Map();
+  for (const h of rec.harvests) {
+    if (h.crop !== crop || h.unit !== unit || !h.planted || !blockById(h.block)) continue;
+    const k = h.block + '|' + h.planted; let pl = m.get(k); if (!pl) m.set(k, pl = { block: h.block, planted: h.planted, end: h.date, amount: 0, yrs: new Set() });
+    pl.amount += h.amount; pl.yrs.add(h.date.slice(0, 4)); if (h.date > pl.end) pl.end = h.date;
+  }
+  return [...m.values()].filter(pl => !yr || pl.yrs.has(yr)).sort((a, b) => a.planted.localeCompare(b.planted));   // a planting harvested across New Year stays whole
+}
+function plantingTable(sum) {
+  const pls = plantingsOf(sum.crop, sum.unit, $('ySeason').value);
+  if (!pls.length) return `<p class="note">Add a planting date when you log a harvest and each planting of ${esc(sum.crop)} gets the weather it had.</p>`;
+  if (!wx.data) return `<p class="note">${wx.loading ? 'Loading the weather history…' : 'Weather history unavailable right now.'}</p>`;
+  const W = waterIndex(), per = sum.per, F = !metric, heat = v => fmt(F ? v * 1.8 : v, 0);
+  const rows = pls.map(pl => ({ pl, b: blockById(pl.block), y: pl.amount / blockArea(blockById(pl.block)) * per, w: plantingWeather(pl, W) }));
+  const ok = rows.filter(r => r.w), yrs = new Set(pls.map(p => p.planted.slice(0, 4))).size > 1;
+  let html = '<table class="htab ptab"><tr><th>Planting</th><th>Yield</th><th title="Rain and watering, planting to last harvest">Water</th><th title="Water minus what a grass crop would lose to evaporation">vs evap.</th><th title="Longest run of days with under ${uRain(2.5)} of rain or watering">Dry spell</th><th title="Growing degree days">Heat</th></tr>' +
+    rows.map(r => `<tr><td>${esc(r.b.name)}<br><small>${dayLabel(dayNum(r.pl.planted))}${yrs ? ' ' + r.pl.planted.slice(0, 4) : ''}, ${dayNum(r.pl.end) - dayNum(r.pl.planted) + 1} days</small></td><td>${fmt(r.y, 1)}</td>` +
+      (r.w ? `<td>${uRain(r.w.water)}${r.w.irr ? `<br><small>${uRain(r.w.irr)} watered</small>` : ''}</td><td>${r.w.water >= r.w.et ? '+' : '−'}${uRain(Math.abs(r.w.water - r.w.et))}</td><td>${r.w.dry} d</td><td>${heat(r.w.gdd)}${r.w.frost ? `<br><small>${r.w.frost} frost</small>` : ''}</td>`
+        : '<td colspan="4"><small>no weather for these dates</small></td>') + '</tr>').join('') + '</table>';
+  html += `<p class="note">Yield in ${sum.unitLabel}. Heat is growing degree days (base ${F ? '50 °F' : '10 °C'}).</p>`;
+  const wet = ok.filter(r => r.w.water >= 25).map(r => ({ ...r, eff: r.y / (F ? r.w.water / 25.4 : r.w.water) }));
+  if (wet.length >= MIN_PATTERN) { const top = wet.reduce((a, r) => r.eff > a.eff ? r : a); html += `<p class="note">Most ${esc(sum.crop)} for the water: ${esc(top.b.name)} planted ${dayLabel(dayNum(top.pl.planted))}, ${fmt(top.eff, 2)} ${sum.unitLabel} for each ${F ? 'inch' : 'mm'} of rain and watering.</p>`; }
+  return html + `<p class="insight">${plantingInsight(sum, ok, rows.length - ok.length)}</p>`;
+}
+function plantingInsight(sum, ok, noWx) {
+  if (ok.length < MIN_PATTERN) return `Comparing plantings with the weather takes at least ${MIN_PATTERN} plantings of ${esc(sum.crop)} with a planting date (${ok.length} so far${noWx ? `, plus ${noWx} with no weather for their dates` : ''}).`;
+  const best = strongestLink(ok.map(r => ({ y: r.y, x: r.w })), [['perWeek', 'Plantings with more water a week', 'those with less'], ['dry', 'Plantings with longer dry spells', 'ones with shorter'], ['heatDay', 'Warmer plantings', 'cooler ones']]);
+  if (!best) return `No clear link between the weather and ${esc(sum.crop)} yield across these ${ok.length} plantings yet. With this few, only a strong pattern would show.`;
+  return `${thirdsLine(best, sum.crop)} (${best.rs.length} plantings). The weather is one reading for the whole farm, and variety, pests and timing change between plantings too, so treat it as a lead, not a finding.`;
+}
+// this season against a normal one, and how far evaporation has run ahead since the last good soaking
+function weatherNow() {
+  if (!rec.blocks.length) return 'Draw a bed or block and the farm\'s weather history appears here.';
+  if (!wx.data) return wx.loading ? 'Loading the farm\'s weather…' : 'The weather service is busy or out of reach; trying again in a few minutes. Gauge and watering entries still save.';
+  // through yesterday, or through today once you've logged rain or watering for today
+  const D = wx.data, W = waterIndex(), y = new Date().getFullYear(), td = dayNum(today()), end = rec.water.some(w => w.date === today()) ? td : Math.min(D.end, td - 1);
+  const firstPlant = rec.harvests.map(h => h.planted).filter(p => p?.startsWith(String(y))).sort()[0];
+  let start = dayNum(firstPlant || `${y}-04-01`); if (start > end) start = dayNum(`${y}-01-01`);
+  if (start > end) return '';
+  let got = 0, gauged = false; for (let d = start; d <= end; d++) { got += rainOn(d, W) || 0; gauged ||= W.gauge.has(d) || W.spans.some(s => d >= s[0] && d <= s[1]); }
+  let out = `Since ${dayLabel(start)}: ${uRain(got)} of rain at the farm${gauged ? ' (your gauge where logged)' : ''}.`;
+  const C = wx.clim;
+  if (C?.daily) {                                                     // the middle year of the last 30, same dates
+    const md0 = dayStr(start).slice(4), md1 = dayStr(end).slice(4), c0 = dayNum(`${C.from}-01-01`), past = [];
+    for (let yy = C.from; yy <= C.to; yy++) { let t = 0; for (let d = dayNum(yy + md0); d <= dayNum(yy + md1); d++) t += C.daily[d - c0] || 0; past.push(t); }
+    past.sort((a, b) => a - b); const m = past.length >> 1, normal = past.length % 2 ? past[m] : (past[m - 1] + past[m]) / 2;
+    out += ` A normal year has ${uRain(normal)} by ${dayLabel(end)} (the middle of ${C.years}).`;
+  }
+  // how far evaporation has run ahead of rain and whole-farm watering since the last soaking (half an inch or more in a day)
+  const wet = d => (rainOn(d, W) || 0) + (W.irr.get(d + '|') || 0);
+  let last = null; for (let d = end; d >= end - 60 && d >= D.start; d--) if (wet(d) >= 12.7) { last = d; break; }
+  if (last !== end) {
+    const from = last ?? end - 60; let gap = 0, ets = 0; for (let d = from + 1; d <= end; d++) { const e = D.e[d - D.start] || 0; ets += e; gap += e - wet(d); }
+    if (gap >= 6 && ets / (end - from) >= 1.5) out += last != null ? ` Since the last soaking (${uRain(12.7)} or more, ${dayLabel(last)}), evaporation has taken ${uRain(gap)} more than fell.`
+      : ` No soaking (${uRain(12.7)} or more in a day) in 60 days: evaporation has taken ${uRain(gap)} more than fell since ${dayLabel(from + 1)}.`;
+  }
+  return out + ` <small>Watering logged for single blocks isn't counted here. Open-Meteo history to ${dayLabel(D.end)}, averaged over about 10 km, so a downpour on your farm alone can be missed. A gauge in the field reads your own rain.</small>`;
+}
+function renderWater() {
+  $('wxNow').innerHTML = weatherNow();
+  const sel = $('wBlock'), keep = sel.value;
+  sel.innerHTML = '<option value="">All blocks</option>' + rec.blocks.map(b => `<option value="${b.id}">${esc(b.name)}</option>`).join('');
+  sel.value = keep && blockById(keep) ? keep : '';
+  sel.classList.toggle('hidden', $('wKind').value !== 'irr');
+  $('wUnit').textContent = metric ? 'mm' : 'in';
+  const list = [...rec.water].sort((a, b) => b.date.localeCompare(a.date));
+  $('wList').innerHTML = list.length ? '<table class="htab"><tr><th>Date</th><th>What</th><th>Amount</th><th></th></tr>' + list.slice(0, 8).map(w =>
+    `<tr><td>${w.date.slice(5)}</td><td>${w.kind === 'rain' ? 'Rain gauge' : 'Watering, ' + esc(w.block ? blockById(w.block)?.name || '–' : 'all blocks')}</td><td>${uRain(w.mm)}</td><td><button class="ghost" data-wdel="${w.id}" title="Delete">✕</button></td></tr>`).join('') + '</table>'
+    + (list.length > 8 ? `<p class="note">${list.length - 8} older entries are in the CSV.</p>` : '') : '';
+  $('wExport').classList.toggle('hidden', !list.length);
+}
+$('wKind').onchange = renderWater;
+$('wDate').value = today();
+$('wSave').onclick = () => {
+  const v = parseFloat($('wAmount').value), date = $('wDate').value || today(), kind = $('wKind').value;
+  if (!(v >= 0) || $('wAmount').value === '') return setStatus('Enter how much rain or water.', true);
+  if (date > today()) return setStatus('That date is in the future.', true);
+  rec.water.push({ id: uid(), date, kind, mm: metric ? v : v * 25.4, block: kind === 'irr' ? $('wBlock').value : '' });
+  saveRec(); $('wAmount').value = '';
+  setStatus(kind === 'rain' ? 'Gauge reading saved, as the rain since your last reading. Until a month passes without one, your gauge replaces the weather history, so log every rain.' : 'Watering saved.');
+  renderRecords();
+};
+$('wList').addEventListener('click', e => { const id = e.target.dataset.wdel; if (id && confirm('Delete this entry?')) { rec.water = rec.water.filter(w => w.id !== id); saveRec(); renderRecords(); } });
+$('wExport').onclick = () => downloadBlob('water-log.csv', new Blob([['date,kind,' + (metric ? 'mm' : 'inches') + ',block',
+  ...[...rec.water].sort((a, b) => a.date.localeCompare(b.date)).map(w => [w.date, w.kind === 'rain' ? 'rain gauge' : 'watering', fmt(metric ? w.mm : w.mm / 25.4, 2).replace(/,/g, ''), `"${String((w.block ? blockById(w.block)?.name : 'all blocks') || '').replace(/"/g, '""')}"`].join(','))].join('\n')], { type: 'text/csv' }));
 
 // ── the Records pane ──
 function renderRecords() {
@@ -4690,7 +5099,7 @@ function renderRecords() {
   $('hExport').classList.toggle('hidden', !rec.harvests.length);
   // summary
   const years = [...new Set(rec.harvests.map(h => h.date.slice(0, 4)))].sort().reverse(), ys = $('ySeason'), yk = ys.value;
-  ys.innerHTML = '<option value="">All seasons</option>' + years.map(y => `<option>${y}</option>`).join(''); ys.value = years.includes(yk) ? yk : (years[0] || '');
+  ys.innerHTML = '<option value="">All seasons</option>' + years.map(y => `<option>${y}</option>`).join(''); ys.value = yk === '' && ys.dataset.all ? '' : years.includes(yk) ? yk : (years[0] || '');
   const crops = [...new Set(rec.harvests.filter(h => !ys.value || h.date.startsWith(ys.value)).map(h => h.crop))], yc = $('yCrop'), ck = yc.value;
   yc.innerHTML = crops.map(c => `<option>${esc(c)}</option>`).join(''); yc.value = crops.includes(ck) ? ck : (crops[0] || '');
   const sum = yieldSummary();
@@ -4699,6 +5108,8 @@ function renderRecords() {
     '<table class="htab"><tr><th>Block</th><th>Yield</th><th>vs avg</th><th>Ground</th></tr>' + [...sum.byBlock].sort((a, b) => b[1] - a[1]).map(([id, y]) => { const b = blockById(id);
       return `<tr><td>${esc(b.name)}</td><td>${fmt(y, 1)}</td><td>${y >= sum.mean ? '+' : ''}${fmt((y / sum.mean - 1) * 100, 0)}%</td><td><small>${b.ground ? `${b.ground.pondPct >= 0.5 ? fmt(b.ground.pondPct, 0) + '% ponds, ' : ''}wetness ${fmt(b.ground.wet, 1)}, ${fmt(b.ground.slope, 1)}%` : '…'}</small></td></tr>`; }).join('') + '</table>' +
     (sum.skipped ? `<p class="note">${sum.skipped} entr${sum.skipped > 1 ? 'ies' : 'y'} in other units left out.</p>` : '') + `<p class="insight">${yieldInsight(sum)}</p>`;
+  $('plantTable').innerHTML = sum ? plantingTable(sum) : '';
+  loadWeather(); renderWater();
   drawBlocks(); renderSoil();
   rec.blocks.forEach(ensureGround);
 }
@@ -4706,16 +5117,26 @@ $('blockList').addEventListener('change', e => { const b = blockById(e.target.cl
 $('blockList').addEventListener('click', e => {
   const b = blockById(e.target.closest('[data-b]')?.dataset.b), act = e.target.dataset.bact; if (!b || !act) return;
   if (act === 'log') openLogFor(b.id);
-  if (act === 'del' && confirm(`Delete ${b.name}${rec.harvests.some(h => h.block === b.id) ? ' and its harvest records' : ''}?`)) { rec.blocks = rec.blocks.filter(x => x !== b); rec.harvests = rec.harvests.filter(h => h.block !== b.id); saveRec(); renderRecords(); }
+  if (act === 'del' && confirm(`Delete ${b.name}${rec.harvests.some(h => h.block === b.id) ? ' and its harvest records' : ''}?`)) { rec.blocks = rec.blocks.filter(x => x !== b); rec.harvests = rec.harvests.filter(h => h.block !== b.id); rec.water = rec.water.filter(w => w.block !== b.id); saveRec(); renderRecords(); }
 });
+// the planting date last used for this block and crop, so repeat pickings land on the same planting
+// (a date you typed yourself is left alone)
+function fillPlanted() {
+  const el = $('hPlanted'); if (el.value && !el.dataset.auto) return;
+  const b = blockById($('hBlock').value), crop = $('hCrop').value.trim() || b?.crop || '';
+  el.value = b?.plantedBy?.[crop] || ''; el.dataset.auto = el.value ? '1' : '';
+}
+$('hPlanted').addEventListener('input', () => { $('hPlanted').dataset.auto = ''; });
+$('hBlock').addEventListener('change', fillPlanted);
+$('hCrop').addEventListener('change', fillPlanted);
 $('hList').addEventListener('click', e => { const id = e.target.dataset.hdel; if (id && confirm('Delete this harvest record?')) { rec.harvests = rec.harvests.filter(h => h.id !== id); saveRec(); renderRecords(); } });
 $('btnBlock').onclick = () => startDraw('block');
 $('btnBlocksAuto').onclick = () => { const n = parseInt(prompt('How many blocks across each field? They run along the contour, so each one sits on similar ground.', '6'), 10); if (n > 0 && n <= 60) blocksFromField(n); };
 $('hExport').onclick = () => downloadBlob('harvest-log.csv', new Blob([harvestCSV()], { type: 'text/csv' }));
-for (const id of ['ySeason', 'yCrop']) $(id).onchange = renderRecords;
+for (const id of ['ySeason', 'yCrop']) $(id).onchange = () => { $('ySeason').dataset.all = $('ySeason').value === '' ? '1' : ''; renderRecords(); };
 $('hDate').value = today();
 $('hDate').addEventListener('input', () => { $('hDate').dataset.set = '1'; });
-$('rail').addEventListener('click', e => { if (e.target.closest('[data-pane="records"]') && !$('hDate').dataset.set) $('hDate').value = today(); });
+$('rail').addEventListener('click', e => { if (!e.target.closest('[data-pane="records"]')) return; if (!$('hDate').dataset.set) $('hDate').value = today(); fillPlanted(); });
 $('hUnit').innerHTML = UNITS_HARVEST.map(u => `<option>${u}</option>`).join('');
 onUnits.push(renderRecords);
 
@@ -4830,7 +5251,7 @@ function soilInsight(plan) {
 }
 $('zoneTable').addEventListener('change', e => {
   const plan = currentPlan(), z = e.target.dataset.z, p = e.target.dataset.p; if (!plan || z == null) return;
-  plan.zones[+z].results[p] = e.target.value === '' ? '' : +e.target.value; saveRec(); renderSoil();
+  plan.zones[+z].results[p] = e.target.value === '' ? '' : +e.target.value; saveRec(); renderSoil(); if (p === 'om') { setOMFromRecords(); applySoak(); }
 });
 $('zMake').onclick = () => { if (currentPlan() && !confirm('Re-plan the zones? Lab results already entered stay with their zone numbers.')) return; makeSoilPlan(); };
 $('zColour').onchange = renderSoil;
@@ -4863,7 +5284,7 @@ $('zFile').onchange = async e => {
     for (const [k, j] of Object.entries(map)) if (j >= 0 && c[j] !== '' && isFinite(+c[j])) plan.zones[z].results[k] = +c[j];
     n++;
   }
-  saveRec(); renderSoil(); setStatus(n ? `Read ${n} row${n > 1 ? 's' : ''} of lab results.` : 'No rows matched a zone (Z1, Z2…).', !n);
+  saveRec(); renderSoil(); setOMFromRecords(); applySoak(); setStatus(n ? `Read ${n} row${n > 1 ? 's' : ''} of lab results.` : 'No rows matched a zone (Z1, Z2…).', !n);
 };
 // GPS guidance to the nearest core spot, like the grade stakes
 function nearestSampleText(ll) {
@@ -5061,11 +5482,13 @@ const TOUR = [
       <p>${tourSample().design}</p>`,
     demo: ['Show cut / fill', () => setSel('overlayMode', 'cutfill')] },
   { ch: 'Analyse a field', needs: 'field', target: () => $('stormBox'), title: 'Storm on the map',
-    body: `<p>Plays a NOAA design storm on the flat map: water depth by class, with a clock. Drag the time slider to go back through it, or show the <b>deepest water</b> reached anywhere. That map goes in the PDF.</p>
-      <p><b>Soak-in</b> starts from the soil survey's hydrologic group. Run it on today's ground or on your design.</p>`,
-    demo: ['Play a 10-year storm', async () => {
+    body: `<p>Plays rain on the flat map: water depth by class, with a clock. Drag the time slider to go back through it, or show the <b>deepest water</b> reached anywhere. That map goes in the PDF.</p>
+      <ul><li><b>Everyday rain</b> for the month you pick, from 30 years of weather history at this spot: a normal rainy day, the biggest rain most years, and about once in 5 years. Then NOAA's design storms. <b>More rain ↑</b> steps up until water starts to run off.</li>
+      <li>The <b>water budget</b> says how many gallons fell, soaked in, stayed and ran off, and labels each outlet. Handy for sizing a pond, a cistern or a waterway.</li>
+      <li><b>Soak-in</b> comes from the soil's sand, clay and organic matter. Change the organic matter (it uses your soil tests if you have them) to see what building it up does to runoff.</li></ul>`,
+    demo: ['Play a 2-year storm', async () => {
       await waitFor(() => $('mStorm').options.length > 1, 6000);
-      const o = [...$('mStorm').options].find(x => x.text.startsWith('10-yr 1-hr')); if (o) $('mStorm').value = o.value;
+      const o = [...$('mStorm').options].find(x => x.text.startsWith('2-yr 1-hr')); if (o) $('mStorm').value = o.value;
       setSel('overlayMode', 'off'); setChk('drainOn', false); playMapStorm();
     }], leave: () => stopMapStorm() },
   { ch: 'Analyse a field', needs: 'field', target: () => $('btn3d'), title: '3D rain',
@@ -5103,7 +5526,8 @@ const TOUR = [
   { ch: 'Food farm records', needs: 'field', target: () => $('btnBlock').closest('.card'), title: 'Beds, blocks and harvests',
     body: `<p>Draw your beds or blocks, or <b>lay them out from the field</b> along the contour. Each block reads its ground from the lidar: slope, ponding, wetness and soil.</p>
       <ul><li><b>Log a harvest</b> from your phone: block, crop, amount. Each entry gets a lot code, and the harvest log exports as CSV for traceability records.</li>
-      <li><b>Yield by block</b> colours the blocks and says which ground property lines up with yield, e.g. "wetter blocks yielded 30% less".</li></ul>`,
+      <li><b>Yield by block</b> colours the blocks and says which ground or soil-test property lines up with yield, e.g. "wetter blocks yielded 30% less". It only says so once there are enough blocks to tell.</li>
+      <li>Add a <b>planting date</b> and each planting gets the weather it had: rain and watering, dry spells, heat. Log your own rain gauge to replace the weather history, which is averaged over about 10 km.</li></ul>`,
     demo: ['Lay out 6 blocks on the sample field', () => { tour.blocksBefore ??= rec.blocks.map(b => b.id); blocksFromField(6); setPane('records'); }] },
   { ch: 'Food farm records', needs: 'field', target: () => $('zMake').closest('.card'), title: 'Soil tests',
     body: `<p><b>Plan sampling zones</b> splits the field by height, wetness and slope, so a wet swale isn't averaged with a dry knoll, and spreads core spots through each zone. Walk to them with GPS, or take the GPX file.</p>
