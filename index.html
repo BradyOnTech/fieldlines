@@ -5504,7 +5504,7 @@ onUnits.push(renderRecords);
 // Zones group cells by height within the field, wetness (how much water gathers there) and slope, with k-means.
 // Sampling each zone separately keeps a wet swale from being averaged with a dry knoll.
 const SOIL_PROPS = [['pH', 'pH', '', 'pH'], ['om', 'Organic matter', '%', 'OM %'], ['p', 'P', 'ppm', 'P ppm'], ['k', 'K', 'ppm', 'K ppm'], ['cec', 'CEC', 'meq', 'CEC']];
-const ZONE_COLS = ['#e6194b', '#3cb44b', '#4363d8', '#f58231', '#911eb4', '#42d4f4', '#f032e6', '#bfef45'];
+const ZONE_COLS = ['#e6194b', '#3cb44b', '#4363d8', '#469990', '#911eb4', '#42d4f4', '#f032e6', '#bfef45'];
 const fieldKey = () => field ? stateToHash({ rings: field.rings, names: [], splits: [], ratio: 0 }).split('&r=')[0] : '';
 let zoneGrid = null;
 function rng(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
@@ -5699,6 +5699,16 @@ const SAMPLES = [
     design: 'This ground is nearly flat, so smoothing out its low spots moves far less dirt than on the Wisconsin sample.' },
 ];
 const tourSample = () => SAMPLES[tour.sample];
+// the demo blocks and sampling zones are put back as they were when their step is left, so they don't sit under later steps
+function undoTourBlocks() {
+  if (!tour.blocksBefore) return;
+  const keep = new Set(tour.blocksBefore); rec.blocks = rec.blocks.filter(b => keep.has(b.id)); tour.blocksBefore = null; saveRec(); renderRecords();
+}
+function undoTourSoil() {                         // per field: the demo can run on both sample fields
+  if (!tour.soilPrev) return;
+  for (const [k, prev] of Object.entries(tour.soilPrev)) if (prev) rec.soil[k] = prev; else delete rec.soil[k];
+  tour.soilPrev = null; zoneGrid = null; saveRec(); renderRecords();
+}
 const sideCard = id => () => $(id)?.closest('.card');
 function mapRect(bounds, pad = 18) {
   const r = $('map').getBoundingClientRect(), a = map.latLngToContainerPoint(bounds.getNorthWest()), b = map.latLngToContainerPoint(bounds.getSouthEast());
@@ -5782,8 +5792,7 @@ async function tourRestore() {
   if ($('ctrInterval').value !== v.ctrInterval) setSel('ctrInterval', v.ctrInterval);
   setLayers(v.layers);
   if (tour.stakes) { tour.stakes = false; setChk('stakesOn', false); }
-  if (tour.blocksBefore) { const keep = new Set(tour.blocksBefore); rec.blocks = rec.blocks.filter(b => keep.has(b.id)); tour.blocksBefore = null; saveRec(); }
-  if (tour.soilKey) { if (tour.soilPrev) rec.soil[tour.soilKey] = tour.soilPrev; else delete rec.soil[tour.soilKey]; tour.soilKey = tour.soilPrev = null; zoneGrid = null; saveRec(); }
+  undoTourBlocks(); undoTourSoil();
   clearTrace(); stopMapStorm(); renderRecords();
   if ($('lidarMode').value !== v.lidarMode) setSel('lidarMode', v.lidarMode);
   if ($('lidarOpacity').value !== v.lidarOpacity) { $('lidarOpacity').value = v.lidarOpacity; $('lidarOpacity').dispatchEvent(new Event('input')); }
@@ -5889,11 +5898,11 @@ const TOUR = [
       <ul><li><b>Log a harvest</b> from your phone: block, crop, amount. Each entry gets a lot code, and the harvest log exports as CSV for traceability records.</li>
       <li><b>Yield by block</b> colours the blocks and says which ground or soil-test property lines up with yield, e.g. "wetter blocks yielded 30% less". It only says so once there are enough blocks to tell.</li>
       <li>Add a <b>planting date</b> and each planting gets the weather it had: rain and watering, dry spells, heat. Log your own rain gauge to replace the weather history, which is averaged over about 10 km.</li></ul>`,
-    demo: ['Lay out 6 blocks on the sample field', () => { tour.blocksBefore ??= rec.blocks.map(b => b.id); blocksFromField(6); setPane('records'); }] },
+    demo: ['Lay out 6 blocks on the sample field', () => { tour.blocksBefore ??= rec.blocks.map(b => b.id); blocksFromField(6); setPane('records'); }], leave: () => undoTourBlocks() },
   { ch: 'Food farm records', needs: 'field', target: () => $('zMake').closest('.card'), title: 'Soil tests',
     body: `<p><b>Plan sampling zones</b> splits the field by height, wetness and slope, so a wet swale isn't averaged with a dry knoll, and spreads core spots through each zone. Walk to them with GPS, or take the GPX file.</p>
       <p>Type in each zone's lab results, or import the lab's CSV, to colour the zones by pH, organic matter, P, K or CEC and see how they follow the ground.</p>`,
-    demo: ['Plan zones on the sample field', () => { if (!tour.soilKey) { tour.soilKey = fieldKey(); tour.soilPrev = rec.soil[tour.soilKey] ? JSON.parse(JSON.stringify(rec.soil[tour.soilKey])) : null; } makeSoilPlan(); setPane('records'); }] },
+    demo: ['Plan zones on the sample field', () => { const k = fieldKey(); tour.soilPrev ??= {}; if (!(k in tour.soilPrev)) tour.soilPrev[k] = rec.soil[k] ? JSON.parse(JSON.stringify(rec.soil[k])) : null; makeSoilPlan(); setPane('records'); }], leave: () => undoTourSoil() },
 
   { ch: 'Profiles', target: () => $('btnProfile'), title: 'Elevation profile',
     body: `<p>Click points along a line (down a ditch, across a field, to an outlet), then finish, to see the ground along it.</p>`,
