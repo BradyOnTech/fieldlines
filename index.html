@@ -705,6 +705,7 @@
               <div class="row"><label for="zColour">Colour zones by</label><select id="zColour"><option value="zone">Zone</option><option value="pH">pH</option><option value="om">Organic matter</option><option value="p">P</option><option value="k">K</option><option value="cec">CEC</option></select></div>
               <div id="zoneTable"></div>
               <div class="btns grow"><button id="zImport" title="A CSV from the lab with a zone column (Z1, Z2…)">Import lab results</button><button id="zGpx">Core spots (.gpx)</button><button id="zCsv">Zones (.csv)</button></div>
+              <button id="zDel" class="linkbtn" style="margin-top:12px">Remove zones</button>
               <input id="zFile" type="file" accept=".csv,.txt" hidden>
             </div>
           </div>
@@ -5613,6 +5614,12 @@ $('zoneTable').addEventListener('change', e => {
   const plan = currentPlan(), z = e.target.dataset.z, p = e.target.dataset.p; if (!plan || z == null) return;
   plan.zones[+z].results[p] = e.target.value === '' ? '' : +e.target.value; saveRec(); renderSoil(); if (p === 'om') { setOMFromRecords(); applySoak(); }
 });
+$('zDel').onclick = () => {
+  const key = fieldKey(), plan = rec.soil[key]; if (!plan) return;
+  const hasResults = plan.zones.some(z => Object.values(z.results || {}).some(v => v !== '' && v != null));
+  if (!confirm(`Remove the sampling zones from this field?${hasResults ? ' The lab results typed in for them go too.' : ''}`)) return;
+  delete rec.soil[key]; zoneGrid = null; saveRec(); renderSoil();
+};
 $('zMake').onclick = () => { if (currentPlan() && !confirm('Re-plan the zones? Lab results already entered stay with their zone numbers.')) return; makeSoilPlan(); };
 $('zColour').onchange = renderSoil;
 $('zGpx').onclick = () => {
