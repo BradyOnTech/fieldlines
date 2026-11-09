@@ -4968,7 +4968,9 @@ async function traceRunOn() {
   $('traceOut').innerHTML = `<p><b>${uArea(total, 1)}</b> outside ${field.rings.length > 1 ? 'your fields' : 'the field'} drains onto ${field.rings.length > 1 ? 'them' : 'it'} (orange).` +
     (field.rings.length > 1 ? `</p><ul class="tlist">${per.map((a, k) => `<li>${esc(field.names[k])}: ${uArea(a, 1)}</li>`).join('')}</ul>` : '</p>') +
     (edge ? `<p class="note">The orange area reaches the edge of the area checked (${uDist(2 * pad * field.g.k)} beyond the fields), so some water comes from farther still.</p>` : '') +
-    (ps.length ? `<p>Pins in the orange area:</p><ul class="tlist">${pinList(ps)}</ul>` : '') + `<p class="note">${SAFETY_NOTE}</p>`;
+    (ps.length ? `<p>Pins in the orange area:</p><ul class="tlist">${pinList(ps)}</ul>` : '') +
+    `<p class="note">The orange is where water comes from <i>when</i> the ground runs off (a downpour, or snowmelt on frozen ground), not how often it does.${field.fit.slope < 1 ? ` This ground falls only ${fmt(field.fit.slope, 1)}%, so which way an edge drains can turn on a few inches, a field-edge ditch or a culvert the lidar doesn't show. Walk the edges after a heavy rain to check.` : ''}</p>` +
+    `<p class="note">${SAFETY_NOTE}</p>`;
   field.runOn = per;
 }
 $('btnTraceSpot').onclick = () => startDraw('trace');
@@ -4983,7 +4985,13 @@ onUnits.push(() => { if ($('traceOut').innerHTML) $('traceOut').innerHTML = '<p 
 // read against it ("the wet blocks yielded less"), and soil sampling zones come from the same ground.
 const REC_KEY = 'fieldlines.records.v1';
 const rec = (() => { try { const r = JSON.parse(localStorage.getItem(REC_KEY)); if (r?.blocks) return { soil: {}, water: [], ...r }; } catch { /* fresh */ } return { blocks: [], harvests: [], soil: {}, water: [] }; })();
-const saveRec = () => { try { localStorage.setItem(REC_KEY, JSON.stringify(rec)); } catch { /* storage full */ } };
+// The tour's demo blocks and zones are flagged and never stored, so closing the page mid-tour can't leave them in your records.
+function recToStore() {
+  let prev = {}; try { prev = tour.soilPrev || {}; } catch { /* tour not set up yet */ }
+  const soil = {}; for (const [k, p] of Object.entries(rec.soil)) { const q = p?.tour ? prev[k] : p; if (q) soil[k] = q; }
+  return { ...rec, blocks: rec.blocks.filter(b => !b.tour), soil };
+}
+const saveRec = () => { try { localStorage.setItem(REC_KEY, JSON.stringify(recToStore())); } catch { /* storage full */ } };
 const BLOCK_COL = '#7ed957';
 const recLayers = { blocks: null, zones: null, samples: null };
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };   // local date, not UTC
@@ -5706,6 +5714,23 @@ const SAMPLES = [
     design: 'This ground is nearly flat, so smoothing out its low spots moves far less dirt than on the Wisconsin sample.' },
 ];
 const tourSample = () => SAMPLES[tour.sample];
+// Older versions of the tour could leave its demo zones and blocks in your records (if the page was closed mid-tour).
+// Once, remove zone plans on the sample fields with no lab results, and blocks inside them with no crop or harvests.
+(() => {
+  const FLAG = 'fieldlines.tourclean.v1';
+  try { if (localStorage.getItem(FLAG)) return; } catch { return; }
+  const inRing = (ring, lat, lng) => { let c = false; for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) { const a = ring[i], b = ring[j]; if ((a.lat > lat) !== (b.lat > lat) && lng < a.lng + (lat - a.lat) / (b.lat - a.lat) * (b.lng - a.lng)) c = !c; } return c; };
+  let changed = false;
+  for (const S of SAMPLES) {
+    const key = stateToHash({ rings: [S.field], names: [], splits: [], ratio: 0 }).split('&r=')[0], plan = rec.soil[key];
+    if (plan && !plan.zones?.some(z => Object.values(z.results || {}).some(v => v !== '' && v != null))) { delete rec.soil[key]; changed = true; }
+    const before = rec.blocks.length;
+    rec.blocks = rec.blocks.filter(b => b.crop || rec.harvests.some(h => h.block === b.id) || !inRing(S.field, b.pts.reduce((t, p) => t + p[0], 0) / b.pts.length, b.pts.reduce((t, p) => t + p[1], 0) / b.pts.length));   // the block's centre
+    if (rec.blocks.length !== before) changed = true;
+  }
+  if (changed) saveRec();
+  try { localStorage.setItem(FLAG, '1'); } catch { /* private mode */ }
+})();
 // the demo blocks and sampling zones are put back as they were when their step is left, so they don't sit under later steps
 function undoTourBlocks() {
   if (!tour.blocksBefore) return;
@@ -5905,11 +5930,11 @@ const TOUR = [
       <ul><li><b>Log a harvest</b> from your phone: block, crop, amount. Each entry gets a lot code, and the harvest log exports as CSV for traceability records.</li>
       <li><b>Yield by block</b> colours the blocks and says which ground or soil-test property lines up with yield, e.g. "wetter blocks yielded 30% less". It only says so once there are enough blocks to tell.</li>
       <li>Add a <b>planting date</b> and each planting gets the weather it had: rain and watering, dry spells, heat. Log your own rain gauge to replace the weather history, which is averaged over about 10 km.</li></ul>`,
-    demo: ['Lay out 6 blocks on the sample field', () => { tour.blocksBefore ??= rec.blocks.map(b => b.id); blocksFromField(6); setPane('records'); }], leave: () => undoTourBlocks() },
+    demo: ['Lay out 6 blocks on the sample field', () => { tour.blocksBefore ??= rec.blocks.map(b => b.id); blocksFromField(6); const had = new Set(tour.blocksBefore); rec.blocks.forEach(b => { if (!had.has(b.id)) b.tour = true; }); saveRec(); setPane('records'); }], leave: () => undoTourBlocks() },
   { ch: 'Food farm records', needs: 'field', target: () => $('zMake').closest('.card'), title: 'Soil tests',
     body: `<p><b>Plan sampling zones</b> splits the field by height, wetness and slope, so a wet swale isn't averaged with a dry knoll, and spreads core spots through each zone. Walk to them with GPS, or take the GPX file.</p>
       <p>Type in each zone's lab results, or import the lab's CSV, to colour the zones by pH, organic matter, P, K or CEC and see how they follow the ground.</p>`,
-    demo: ['Plan zones on the sample field', () => { const k = fieldKey(); tour.soilPrev ??= {}; if (!(k in tour.soilPrev)) tour.soilPrev[k] = rec.soil[k] ? JSON.parse(JSON.stringify(rec.soil[k])) : null; makeSoilPlan(); setPane('records'); }], leave: () => undoTourSoil() },
+    demo: ['Plan zones on the sample field', () => { const k = fieldKey(); tour.soilPrev ??= {}; if (!(k in tour.soilPrev)) tour.soilPrev[k] = rec.soil[k] ? JSON.parse(JSON.stringify(rec.soil[k])) : null; makeSoilPlan(); if (rec.soil[k]) rec.soil[k].tour = true; saveRec(); setPane('records'); }], leave: () => undoTourSoil() },
 
   { ch: 'Profiles', target: () => $('btnProfile'), title: 'Elevation profile',
     body: `<p>Click points along a line (down a ditch, across a field, to an outlet), then finish, to see the ground along it.</p>`,
