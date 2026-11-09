@@ -5692,7 +5692,7 @@ applyLidar();
 
 // ───────────────────────── guided tour ─────────────────────────
 // Spotlights one control at a time, explains it, and can run each feature on a real sample field.
-const TOUR_KEY = 'fieldlines.tour.v1';
+const TOUR_KEY = 'fieldlines.tour.v2';   // bumped when the tour changes a lot, so returning visitors are offered it once more
 // Sample fields the tour can run on. "Show another field" steps through them.
 const lls = a => a.map(p => L.latLng(p[0], p[1]));
 const SAMPLES = [
