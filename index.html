@@ -203,8 +203,16 @@
   /* map overlays */
   .floating { position: absolute; z-index: 800; background: var(--glass); color: var(--text); border-radius: 10px; box-shadow: var(--glass-edge);
     -webkit-backdrop-filter: blur(20px) saturate(1.8); backdrop-filter: blur(20px) saturate(1.8); }
-  #drawbar { top: 12px; left: calc(50% + var(--sideW) / 2); transform: translateX(-50%); padding: 6px 6px 6px 12px; display: flex; gap: 6px; align-items: center; white-space: nowrap; }
-  #drawbar span { margin-right: 4px; }
+  #drawbar, #pickbar { top: 12px; left: calc(50% + var(--sideW) / 2); transform: translateX(-50%); padding: 6px 6px 6px 12px; display: flex; gap: 6px; align-items: center; white-space: nowrap; }
+  #drawbar span, #pickbar span { margin-right: 4px; }
+  #pickbar span { font-variant-numeric: tabular-nums; }
+  #findCta { position: absolute; z-index: 790; bottom: 28px; left: calc(50% + var(--sideW) / 2); transform: translateX(-50%); display: flex; align-items: center; gap: 8px;
+    height: 44px; padding: 0 20px 0 16px; border-radius: 22px; border: 0; background: var(--accent); color: #fff; font: 600 15px/1 inherit; font-family: inherit; cursor: pointer;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, .28), 0 1px 3px rgba(0, 0, 0, .2); transition: transform .15s ease, box-shadow .15s ease; }
+  #findCta:hover { transform: translateX(-50%) translateY(-1px); box-shadow: 0 8px 24px rgba(0, 0, 0, .32), 0 1px 3px rgba(0, 0, 0, .2); }
+  #findCta:active { transform: translateX(-50%) scale(.97); }
+  #findCta svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
+  #map.picking .leaflet-interactive { cursor: pointer; }
   #map.editing .leaflet-interactive { cursor: move; }
   #toast { top: 12px; left: calc(var(--sideW) + 12px); padding: 8px 12px; display: flex; gap: 8px; align-items: center; }
   .spin { width: 13px; height: 13px; border: 2px solid rgba(0, 0, 0, .12); border-top-color: var(--accent); border-radius: 50%; animation: s .8s linear infinite; }
@@ -375,10 +383,11 @@
     #lidarInfo { max-width: 60%; bottom: calc(var(--sideH) + 36px); }
     .leaflet-control-attribution { font-size: 9.5px; }
     #tourPop, #tourPop.wide { left: 12px !important; right: 12px; top: 12px !important; bottom: auto; width: auto; }
-    #drawbar { left: 10px; right: 62px; transform: none; flex-wrap: wrap; white-space: normal; padding: 8px; }
-    #drawbar span { flex: 1 0 100%; margin: 0 0 2px 4px; font-size: 13px; }
-    #drawbar button { flex: 1; white-space: nowrap; padding: 0 8px; }
-    #drawbar { z-index: 1100; }
+    #drawbar, #pickbar { left: 10px; right: 62px; transform: none; flex-wrap: wrap; white-space: normal; padding: 8px; }
+    #drawbar span, #pickbar span { flex: 1 0 100%; margin: 0 0 2px 4px; font-size: 13px; }
+    #drawbar button, #pickbar button { flex: 1; white-space: nowrap; padding: 0 8px; }
+    #drawbar, #pickbar { z-index: 1100; }
+    #findCta { bottom: auto; top: 12px; left: calc(50% - 26px); }
   }
 </style>
 </head>
@@ -457,7 +466,7 @@
           </div>
           <h2 class="sh">Units</h2>
           <div class="card"><div class="row"><label for="unitSel">Measurements</label><select id="unitSel"><option value="us">US: ft, ac</option><option value="metric">Metric: m, ha</option></select></div></div>
-          <p class="foot">Elevation from USGS 3DEP (public domain), imagery from Esri, weather history from Open-Meteo (CC BY 4.0). Drainage uses priority-flood depression filling and D8 flow accumulation inside the analysis window, so water arriving from far outside the window is undercounted.</p>
+          <p class="foot">Elevation from USGS 3DEP (public domain), imagery from Esri, weather history from Open-Meteo (CC BY 4.0), field outlines from Fields of The World (CC BY 4.0). Drainage uses priority-flood depression filling and D8 flow accumulation inside the analysis window, so water arriving from far outside the window is undercounted.</p>
         </section>
 
         <section class="pane" data-pane="layers">
@@ -607,8 +616,8 @@
           </div>
           <div class="empty card">
             <b>No field yet</b>
-            <p>Draw a field's corners on the map, or import a boundary, to see where its water goes.</p>
-            <div class="btns"><button class="primary" data-click="btnField">Draw field</button><button data-click="btnImport">Import boundary</button></div>
+            <p>Tap your fields on the map, draw their corners, or import a boundary to see where the water goes.</p>
+            <div class="btns"><button class="primary" data-click="findCta">Find fields</button><button data-click="btnField">Draw field</button><button data-click="btnImport">Import</button></div>
           </div>
 
           <div id="savedCard" class="hidden">
@@ -643,7 +652,12 @@
         <section class="pane" data-pane="records">
           <h2 class="sh">Beds and blocks</h2>
           <div class="card">
-            <div class="btns grow"><button id="btnBlock" class="primary">Draw a bed or block</button><button id="btnBlocksAuto" title="Strips along the contour of the analysed field">Lay out from the field</button></div>
+            <div class="btns grow"><button id="btnBlock" class="primary">Draw a bed or block</button><button id="btnBlocksAuto" title="Split the analysed field into blocks">Lay out from the field</button></div>
+            <div id="layoutBox" class="hidden">
+              <div class="row"><label for="lyHow">Split</label><select id="lyHow"><option value="contour">Along the contour</option><option value="water">Following the water</option></select></div>
+              <div class="row"><label for="lyN">Blocks per field</label><input id="lyN" type="number" min="2" max="40" value="6" style="width:64px"><button id="lyGo" class="primary" style="flex:none">Lay out</button></div>
+              <p id="lyNote" class="note" style="margin:2px 0 6px"></p>
+            </div>
             <div id="blockList"></div>
           </div>
           <h2 class="sh">Log a harvest</h2>
@@ -735,6 +749,13 @@
       <button id="drawDone" class="primary">Finish</button>
       <button id="drawCancel" class="ghost">Cancel</button>
     </div>
+    <div id="pickbar" class="floating hidden" role="toolbar" aria-label="Find fields">
+      <span id="pickHint">Tap the fields to analyse</span>
+      <button id="pickDraw">Draw instead</button>
+      <button id="pickGo" class="primary" disabled>Analyse</button>
+      <button id="pickCancel" class="ghost">Cancel</button>
+    </div>
+    <button id="findCta" class="hidden" title="Pick your fields from outlines mapped from satellite images"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6l7-2 9 3-2 12-9 1-5-4z"/><circle cx="11.5" cy="11.5" r="2.2"/></svg>Find a field</button>
     <div id="swipe" class="hidden"><div class="knob">⇆</div><span id="swipeL"></span><span id="swipeR"></span></div>
     <div id="toast" class="floating hidden"><div class="spin"></div><span id="toastMsg"></span></div>
     <div id="readout" class="floating hidden"></div>
@@ -781,7 +802,8 @@ async function loadThree() {
   if (!THREE) [THREE, { OrbitControls }] = await Promise.all([import('three'), import('three/addons/controls/OrbitControls.js')]);
 }
 const LIBS = { jspdf: 'https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js',
-  jszip: 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js', shp: 'https://cdn.jsdelivr.net/npm/shpjs@6.1.0/dist/shp.min.js' };
+  jszip: 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js', shp: 'https://cdn.jsdelivr.net/npm/shpjs@6.1.0/dist/shp.min.js',
+  pmtiles: 'https://cdn.jsdelivr.net/npm/pmtiles@3.2.0/dist/pmtiles.js' };
 const libLoads = {};
 function needLib(k) {
   return libLoads[k] ??= new Promise((ok, bad) => {
@@ -920,7 +942,7 @@ function segmented(id) {
   seg.onclick = e => { const b = e.target.closest('button'); if (!b || b.dataset.v === sel.value) return; sel.value = b.dataset.v; sel.dispatchEvent(new Event('change', { bubbles: true })); };
   onValueSet(sel, () => seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === sel.value)));
 }
-['overlayMode', 'drainDetail', 'ctrSource', 'unitSel'].forEach(segmented);
+['overlayMode', 'drainDetail', 'ctrSource', 'unitSel', 'lyHow'].forEach(segmented);
 // rebuild a segmented control's buttons after its <select> options change
 function segRefresh(sel) {
   const seg = sel.nextElementSibling; if (!seg?.classList.contains('seg')) return;
@@ -1590,7 +1612,7 @@ async function identifyAt(ll) {
   pop.setContent(`<div class="idinfo">${parts.join('<hr>')}<div class="ll">${ll.lat.toFixed(6)}, ${ll.lng.toFixed(6)}</div></div>`);
   pop.getElement()?.querySelectorAll('a[data-parcel]').forEach(a => a.onclick = e => { e.preventDefault(); map.closePopup(); useParcel(ll).catch(fail); });
 }
-map.on('click', e => { if (!draw.mode && !editing) identifyAt(e.latlng); });
+map.on('click', e => { if (!draw.mode && !editing && !finder.on) identifyAt(e.latlng); });
 
 // ── soils inside the field (area-weighted from SSURGO polygons) ──
 async function loadFieldSoils(me) {
@@ -1696,7 +1718,7 @@ async function importFile(file) {
     const label = r.name || `Boundary ${k + 1}`;
     L.polygon(r.pts, { color: '#5ee7ff', weight: 2, dashArray: '5 4', fillOpacity: 0.06 })
       .bindTooltip(label + ' · click to analyse', { sticky: true })
-      .on('click', e => { L.DomEvent.stop(e); importLayer.clearLayers(); analyzeField(r.pts).catch(fail); })
+      .on('click', e => { if (finder.on) return; L.DomEvent.stop(e); importLayer.clearLayers(); analyzeField(r.pts).catch(fail); })
       .addTo(importLayer);
   });
   map.fitBounds(importLayer.getBounds(), { padding: [30, 30] });
@@ -2396,8 +2418,8 @@ const draw = { mode: null, pts: [], shape: null, guide: null, dots: null };
 function startDraw(mode) {
   cancelDraw();
   Object.assign(draw, { mode, pts: [] });
-  map.doubleClickZoom.disable();
-  $('map').classList.add('drawing');
+  map.doubleClickZoom.disable(); stopFinder();
+  $('map').classList.add('drawing'); showFindCta();
   if ((mode === 'split' || mode === 'ditch' || mode === 'addfield') && !field?.sections) return;
   if (mode === 'trace') $('drawGps').classList.add('hidden'); else $('drawGps').classList.remove('hidden');
   $('drawbar').classList.remove('hidden');
@@ -2423,7 +2445,7 @@ function cancelDraw() {
   $('drawUndo').classList.remove('hidden'); $('drawDone').classList.remove('hidden');
   map.doubleClickZoom.enable();
   $('map').classList.remove('drawing');
-  $('drawbar').classList.add('hidden');
+  $('drawbar').classList.add('hidden'); showFindCta();
 }
 function redrawDraft() {
   draw.shape.setLatLngs(draw.pts);
@@ -2468,6 +2490,221 @@ map.on('mousemove', e => {
   hoverReadout(e.latlng);
 });
 $('btnField').onclick = () => startDraw('field');
+
+// ───────────────────────── find fields: tap outlines mapped from satellite images ─────────────────────────
+// Fields of The World (2025): field boundaries a model traced from Sentinel-2 images, CC BY 4.0. Read straight from the
+// archive's zoom-13 map tiles while picking. Good on full-size fields, but small vegetable plots are often missed and edges
+// are only good to 10–20 m, so an outline is a starting point: Edit shape fixes it, Draw instead replaces it.
+const FTW_URL = 'https://data.source.coop/ftw/global-data-2e/vector/2025/fields-2025.pmtiles', FTW_Z = 13, PICK_MAX = 8;
+const finder = { on: false, add: false, src: null, tiles: new Map(), loaded: new Map(), fields: new Map(), picked: new Set(), layer: null, renderer: null, shapes: new Map(), seq: 0, inView: 0 };
+// a minimal Mapbox Vector Tile reader: polygons and properties from one layer
+function mvtPolygons(buf, want) {
+  const b = new Uint8Array(buf), dv = new DataView(b.buffer, b.byteOffset, b.byteLength), td = new TextDecoder(), out = [];
+  let p = 0;
+  const vi = () => { let v = 0, m = 1, x; do { x = b[p++]; v += (x & 0x7f) * m; m *= 128; } while (x & 0x80); return v; };
+  const skip = t => { if (t === 0) vi(); else if (t === 1) p += 8; else if (t === 2) p += vi(); else if (t === 5) p += 4; };
+  const str = () => { const n = vi(); return td.decode(b.subarray(p, p += n)); };
+  const zz = n => n % 2 ? -(n + 1) / 2 : n / 2;
+  while (p < b.length) {
+    const tag = vi(); if (tag !== 26) { skip(tag & 7); continue; }          // field 3 (layers), length-delimited
+    const end = vi() + p; let name = '', extent = 4096; const keys = [], vals = [], feats = [];
+    while (p < end) {
+      const t = vi(), f = t >> 3;
+      if (f === 1) name = str();
+      else if (f === 2) { const fe = vi() + p; feats.push([p, fe]); p = fe; }
+      else if (f === 3) keys.push(str());
+      else if (f === 4) { const ve = vi() + p; let v = null;
+        while (p < ve) { const vt = vi(), k = vt >> 3;
+          if (k === 1) v = str(); else if (k === 2) { v = dv.getFloat32(p, true); p += 4; } else if (k === 3) { v = dv.getFloat64(p, true); p += 8; }
+          else if (k === 4 || k === 5) v = vi(); else if (k === 6) v = zz(vi()); else if (k === 7) v = !!vi(); else skip(vt & 7); }
+        vals.push(v); }
+      else if (f === 5) extent = vi();
+      else skip(t & 7);
+    }
+    if (name === want) for (const [fs, fe] of feats) {
+      p = fs; const props = {}; let geom = null, type = 0;
+      while (p < fe) { const t = vi(), f = t >> 3;
+        if (f === 2) { const e2 = vi() + p; while (p < e2) { const k = vi(), v = vi(); props[keys[k]] = vals[v]; } }
+        else if (f === 3) type = vi();
+        else if (f === 4) { const e2 = vi() + p; geom = []; while (p < e2) geom.push(vi()); }
+        else skip(t & 7); }
+      if (type !== 3 || !geom) continue;
+      const rings = []; let x = 0, y = 0, ring = null;
+      for (let i = 0; i < geom.length;) {
+        const c = geom[i++], id = c & 7, n = c >> 3;
+        if (id === 7) { if (ring?.length > 2) rings.push(ring); ring = null; continue; }
+        for (let k = 0; k < n; k++) { x += zz(geom[i++]); y += zz(geom[i++]); if (id === 1) ring = [[x, y]]; else ring?.push([x, y]); }
+      }
+      out.push({ props, rings, extent });
+    }
+    p = end;
+  }
+  return out;
+}
+const ringAreaXY = r => { let a = 0; for (let i = 0, j = r.length - 1; i < r.length; j = i++) a += (r[j].x + r[i].x) * (r[j].y - r[i].y); return a / 2; };
+// one tile's field pieces, in map metres
+function ftwTile(x, y) {
+  const key = x + '/' + y;
+  if (!finder.tiles.has(key)) finder.tiles.set(key, (async () => {
+    await needLib('pmtiles'); finder.src ??= new pmtiles.PMTiles(FTW_URL);
+    const t = await finder.src.getZxy(FTW_Z, x, y); if (!t) return [];
+    const n = 2 ** FTW_Z;
+    return mvtPolygons(t.data, 'fields').filter(f => f.rings.length).map(f => ({ id: String(f.props.id), score: +f.props.score || 0, area: +f.props['metrics:area'] || 0, key,
+      rings: f.rings.map(r => r.map(([px, py]) => proj(L.latLng(Math.atan(Math.sinh(Math.PI * (1 - 2 * (y + py / f.extent) / n))) * 180 / Math.PI, (x + px / f.extent) / n * 360 - 180)))) }));
+  })().then(pcs => { finder.loaded.set(key, pcs); return pcs; }).catch(e => { finder.tiles.delete(key); throw e; }));
+  return finder.tiles.get(key);
+}
+// (re)build outlines from every tile loaded so far: a field only ever gains pieces, so it never shrinks
+function finderBuild() {
+  const by = new Map(); for (const l of finder.loaded.values()) for (const pc of l) { const a = by.get(pc.id); if (a) a.push(pc); else by.set(pc.id, [pc]); }
+  for (const [id, pcs] of by) {
+    const sig = pcs.map(pc => pc.key).sort().join(), have = finder.fields.get(id); if (have?.sig === sig) continue;
+    const ring = pcs.length === 1 ? pcs[0].rings.reduce((a, r) => Math.abs(ringAreaXY(r)) > Math.abs(ringAreaXY(a)) ? r : a, pcs[0].rings[0]) : stitchPieces(pcs);
+    if (!ring || ring.length < 3) continue;
+    const lls = ring.map(q => unproj(q.x, q.y)), k = Math.cos(lls[0].lat * Math.PI / 180);
+    finder.fields.set(id, { id, sig, ring, lls, keys: new Set(pcs.map(pc => pc.key)), score: Math.max(...pcs.map(pc => pc.score)), area: Math.max(...pcs.map(pc => pc.area)), got: Math.abs(ringAreaXY(ring)) * k * k });
+  }
+}
+// a field reaching into tiles not loaded yet is only partly drawn: load the tiles around it until its area adds up
+async function completeField(id) {
+  for (let round = 0; round < 4; round++) {
+    const f = finder.fields.get(id); if (!f || !f.area || f.got >= f.area * 0.97) return;
+    const want = new Set(); for (const key of f.keys) { const [x, y] = key.split('/').map(Number); for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) { const k2 = (x + dx) + '/' + (y + dy); if (!finder.loaded.has(k2)) want.add(k2); } }
+    if (!want.size) return;
+    await Promise.all([...want].map(k2 => { const [x, y] = k2.split('/').map(Number); return ftwTile(x, y).catch(() => []); }));
+    finderBuild();
+  }
+}
+// a field cut by tile edges comes in pieces: paint them onto a fine grid and trace the outside edge
+function stitchPieces(pcs) {
+  const all = pcs.flatMap(pc => pc.rings.flat());
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const q of all) { x0 = Math.min(x0, q.x); x1 = Math.max(x1, q.x); y0 = Math.min(y0, q.y); y1 = Math.max(y1, q.y); }
+  const cell = Math.max(1, Math.max(x1 - x0, y1 - y0) / 400), X0 = x0 - cell, Y0 = y1 + cell, W = Math.ceil((x1 - x0) / cell) + 3, H = Math.ceil((y1 - y0) / cell) + 3, m = new Uint8Array(W * H);
+  for (const pc of pcs) for (let r = 0; r < H; r++) {                  // even-odd fill, one piece at a time
+    const yc = Y0 - (r + 0.5) * cell, xs = [];
+    for (const ring of pc.rings) for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) { const a = ring[i], c = ring[j]; if ((a.y > yc) !== (c.y > yc)) xs.push(a.x + (yc - a.y) / (c.y - a.y) * (c.x - a.x)); }
+    xs.sort((a, c) => a - c);
+    for (let k = 0; k + 1 < xs.length; k += 2) for (let cc = Math.ceil((xs[k] - X0) / cell - 0.5); (cc + 0.5) * cell + X0 <= xs[k + 1]; cc++) if (cc >= 0 && cc < W) m[r * W + cc] = 1;
+  }
+  const next = new Map(), K = (c, r) => r * (W + 1) + c, add = (a, z) => { const l = next.get(a); if (l) l.push(z); else next.set(a, [z]); };
+  for (let r = 1; r < H - 1; r++) for (let c = 1; c < W - 1; c++) { const i = r * W + c; if (!m[i]) continue;
+    if (!m[i - W]) add(K(c, r), K(c + 1, r)); if (!m[i + 1]) add(K(c + 1, r), K(c + 1, r + 1));
+    if (!m[i + W]) add(K(c + 1, r + 1), K(c, r + 1)); if (!m[i - 1]) add(K(c, r + 1), K(c, r)); }
+  let best = null, bestA = 0;
+  while (next.size) {
+    const [s0] = next.keys(), loop = []; let v = s0;
+    do { const outs = next.get(v); if (!outs) break; const w = outs.pop(); if (!outs.length) next.delete(v); loop.push(v); v = w; } while (v !== s0);
+    const ring = loop.map(k => ({ x: X0 + (k % (W + 1)) * cell, y: Y0 - Math.floor(k / (W + 1)) * cell })), a = Math.abs(ringAreaXY(ring));
+    if (a > bestA) { bestA = a; best = ring; }
+  }
+  return best && simplifyXY(best, cell);
+}
+// Douglas–Peucker on a closed ring (map metres)
+function simplifyXY(r, tol) {
+  if (r.length < 5) return r;
+  const dp = (pts) => { const keep = new Uint8Array(pts.length); keep[0] = keep[pts.length - 1] = 1; const st = [[0, pts.length - 1]];
+    while (st.length) { const [a, z] = st.pop(), A = pts[a], dx = pts[z].x - A.x, dy = pts[z].y - A.y, len = Math.hypot(dx, dy) || 1e-9; let md = 0, mi = -1;
+      for (let i = a + 1; i < z; i++) { const d = Math.abs(dy * (pts[i].x - A.x) - dx * (pts[i].y - A.y)) / len; if (d > md) { md = d; mi = i; } }
+      if (md > tol) { keep[mi] = 1; st.push([a, mi], [mi, z]); } }
+    return pts.filter((_, i) => keep[i]); };
+  let far = 0, fd = 0; r.forEach((q, i) => { const d = Math.hypot(q.x - r[0].x, q.y - r[0].y); if (d > fd) { fd = d; far = i; } });
+  const A = dp(r.slice(0, far + 1)), B = dp([...r.slice(far), r[0]]);
+  return [...A, ...B.slice(1, -1)];
+}
+// the corners to analyse: few enough to drag in Edit shape (≤ 40), true to about 3 m where it can be
+function pickRing(f) {
+  const k = Math.cos(f.lls[0].lat * Math.PI / 180); let tol = 3 / k, r = f.ring;
+  while ((r = simplifyXY(f.ring, tol)).length > 40) tol *= 1.4;
+  return r.map(q => unproj(q.x, q.y));
+}
+function finderHint(t) { $('pickHint').textContent = t; }
+function finderSummary() {
+  const n = finder.picked.size; $('pickGo').disabled = !n;
+  if (!n) return finderHint(finder.inView ? 'Tap the fields to analyse' : 'No field outlines here. Draw it instead.');
+  const ac = [...finder.picked].reduce((t, id) => t + Math.abs(ringAreaXY(finder.fields.get(id).ring)) * Math.cos(finder.fields.get(id).lls[0].lat * Math.PI / 180) ** 2, 0) / ACRE_M2;
+  finderHint(`${n} field${n > 1 ? 's' : ''} · ${uAc(ac, 1)}`);
+}
+function styleShape(id) {
+  const sh = finder.shapes.get(id), on = finder.picked.has(id);
+  sh?.setStyle(on ? { color: '#fff', weight: 2.5, fillColor: '#ffd60a', fillOpacity: 0.38 } : { color: '#ffd60a', weight: 1.6, fillColor: '#ffd60a', fillOpacity: 0.07 });
+}
+// outlines for the view: fetch the tiles it needs, join pieces, draw
+async function finderLoad() {
+  if (!finder.on) return;
+  const seq = ++finder.seq;
+  if (map.getZoom() < 14) { finder.layer?.clearLayers(); finder.shapes.clear(); finder.inView = 0; $('pickGo').disabled = !finder.picked.size; return finderHint(finder.picked.size ? `${finder.picked.size} picked · zoom in to see outlines` : 'Zoom in on the farm to see field outlines'); }
+  const b = map.getBounds(), n = 2 ** FTW_Z, tx = lng => Math.floor((lng + 180) / 360 * n), ty = lat => { const r = lat * Math.PI / 180; return Math.floor((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * n); };
+  const xs = [tx(b.getWest()), tx(b.getEast())], ys = [ty(b.getNorth()), ty(b.getSouth())], want = [];
+  for (let x = xs[0]; x <= xs[1]; x++) for (let y = ys[0]; y <= ys[1]; y++) want.push([x, y]);
+  if (want.length > 20) return finderHint('Zoom in a little to see field outlines');
+  if (!finder.fields.size) finderHint('Finding fields…');
+  let lists;
+  try { lists = await Promise.all(want.map(([x, y]) => ftwTile(x, y))); }
+  catch { if (seq === finder.seq) finderHint('Field outlines are out of reach right now. Draw it instead.'); return; }
+  if (seq !== finder.seq || !finder.on) return;
+  finderBuild();
+  const inField = q => field?.mercRings.some(r => inRing(r, q.x, q.y)), ids = new Set(lists.flat().map(pc => pc.id));
+  if (!map.getPane('finder')) map.createPane('finder').style.zIndex = 450;   // above blocks, tracks and imports, so taps reach the outlines
+  finder.layer ??= L.layerGroup().addTo(map);
+  finder.renderer ??= L.canvas({ padding: 0.3, pane: 'finder' });
+  const seen = new Set();
+  for (const id of ids) {
+    const f = finder.fields.get(id); if (!f) continue;
+    if (finder.add && !finder.picked.has(id)) { let cx = 0, cy = 0; f.ring.forEach(q => { cx += q.x; cy += q.y; }); if (inField({ x: cx / f.ring.length, y: cy / f.ring.length })) continue; }   // already in the view
+    seen.add(id);
+    if (finder.shapes.has(id)) { if (finder.shapes.get(id).sig !== f.sig) { finder.layer.removeLayer(finder.shapes.get(id)); finder.shapes.delete(id); } else continue; }
+    const sh = L.polygon(f.lls, { renderer: finder.renderer, bubblingMouseEvents: false }).addTo(finder.layer);
+    sh.sig = f.sig;
+    sh.on('click', () => {
+      if (finder.picked.has(id)) finder.picked.delete(id);
+      else if (finder.picked.size >= PICK_MAX) return finderHint(`Up to ${PICK_MAX} fields at a time`);
+      else finder.picked.add(id);
+      styleShape(id); finderSummary();
+    });
+    sh.on('mouseover', () => !finder.picked.has(id) && sh.setStyle({ weight: 2.6, fillOpacity: 0.16 })).on('mouseout', () => styleShape(id));
+    finder.shapes.set(id, sh); styleShape(id);
+  }
+  for (const [id, sh] of finder.shapes) if (!seen.has(id) && !finder.picked.has(id)) { finder.layer.removeLayer(sh); finder.shapes.delete(id); }
+  finder.inView = seen.size; finderSummary();
+}
+function startFinder(add = false) {
+  cancelDraw(); stopEditing(); stopFinder();
+  Object.assign(finder, { on: true, add: add && !!field, picked: new Set(), inView: 0 }); map.closePopup();
+  $('pickbar').classList.remove('hidden'); $('map').classList.add('picking'); $('pickDraw').textContent = 'Draw instead';
+  map.attributionControl.addAttribution(FTW_ATTR);
+  finderSummary(); showFindCta(); finderLoad();
+}
+const FTW_ATTR = 'Field outlines: <a href="https://source.coop/ftw/global-data-2e" target="_blank" rel="noopener">Fields of The World</a> (CC BY 4.0)';
+function stopFinder() {
+  if (!finder.on) return;
+  finder.on = false; finder.seq++;
+  finder.layer?.clearLayers(); finder.shapes.clear();
+  finder.renderer?.remove(); finder.renderer = null;                   // an empty canvas would still catch clicks
+  $('pickbar').classList.add('hidden'); $('map').classList.remove('picking');
+  map.attributionControl.removeAttribution(FTW_ATTR);
+  showFindCta();
+}
+async function finderGo() {
+  if (!finder.picked.size || $('pickGo').disabled) return;
+  $('pickGo').disabled = true; finderHint('Joining field edges…');
+  const seq = finder.seq; await Promise.all([...finder.picked].map(completeField));
+  if (seq !== finder.seq || !finder.on) return;
+  const fs = [...finder.picked].map(id => finder.fields.get(id)).filter(Boolean); if (!fs.length) return;
+  const rings = fs.map(pickRing), add = finder.add && field, low = fs.some(f => f.score < 50);
+  stopFinder();
+  const note = `${fs.length > 1 ? 'Outlines' : 'Outline'} from Fields of The World, traced from satellite images${low ? ' with low confidence' : ''}. Check the edges against the photo; Edit shape moves the corners.`;
+  if (add) addFieldRings(rings);
+  else analyzeFields(rings).then(() => { if (field) setStatus(note); }).catch(fail);
+}
+$('pickGo').onclick = finderGo;
+$('pickCancel').onclick = stopFinder;
+$('pickDraw').onclick = () => { const add = finder.add; stopFinder(); startDraw(add ? 'addfield' : 'field'); };
+map.on('moveend', () => finder.on && finderLoad());
+map.on('click', () => { if (finder.on && map.getZoom() >= 14 && finder.inView) finderHint('No outline there. Tap a yellow outline, or Draw instead.'); });
+// the big "Find a field" button: only while there's nothing analysed and nothing being drawn
+function showFindCta() { $('findCta').classList.toggle('hidden', !!(field || finder.on || draw.mode || !$('tourPop').classList.contains('hidden'))); }
+setTimeout(showFindCta);                                             // after the script has run (field is declared further down)
+$('findCta').onclick = () => { if (map.getZoom() < 14) setStatus('Zoom in on your farm, then tap its fields.'); startFinder(false); };
 $('btnProfile').onclick = () => startDraw('profile');
 $('btnPin').onclick = () => startDraw('pin');
 $('btnMeasure').onclick = () => startDraw('measure');
@@ -2499,7 +2736,7 @@ $('drawGps').onclick = async () => {
 if (!navigator.geolocation) $('drawGps').remove();
 $('drawDone').onclick = () => finishDraw();
 $('drawCancel').onclick = cancelDraw;
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { cancelDraw(); closeFlow(); stopEditing(); map.closePopup(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { cancelDraw(); stopFinder(); closeFlow(); stopEditing(); map.closePopup(); } });
 
 // ───────────────────────── field analysis ─────────────────────────
 const SEC_COLORS = ['#e3b341', '#4fd1c5', '#f687b3', '#b794f4', '#68d391', '#f6ad55', '#63b3ed', '#fc8181'];
@@ -2532,6 +2769,7 @@ async function analyzeFields(rings, opts = {}) {
   const outline = L.polygon(rings.map(r => [r]), { color: '#e3b341', weight: 2.5, fill: false, interactive: false }).addTo(map);
   const names = rings.map((_, k) => (opts.names?.[k] || (rings.length > 1 ? `Field ${fieldLetter(k)}` : 'Field')).replace(/\|/g, '/'));
   field = { rings, names, pts, merc, mercRings, g, splits: (opts.splits || []).map(s => s.map(p => L.latLng(p))), ditches: (opts.ditches || []).map(d => ({ ...d, pts: d.pts.map(p => L.latLng(p)) })), sel: 0, layers: { outline } };
+  stopFinder(); showFindCta();
   const me = field;
 
   busy(`Downloading lidar elevation · ${g.W}×${g.H} cells @ ${uLen(g.gc, 1)}`);
@@ -2568,7 +2806,7 @@ async function analyzeFields(rings, opts = {}) {
   Object.assign(field, { acres: field.count * A / ACRE_M2, pondAc: pondCells * A / ACRE_M2, pondYd: pondVol / YD3_M3 });
   showFieldStats();
   drawStakes();
-  $('fieldCard').classList.remove('hidden');
+  $('fieldCard').classList.remove('hidden'); showFindCta();
 
   renderOverlay(); drawDrainage(); renderContours();
   loadFieldSoils(field);
@@ -2627,7 +2865,7 @@ $('fieldsTable').addEventListener('click', e => {
   regroup(keep.map(j => field.rings[j]), { ...fieldState(), names: keep.map(j => field.names[j]),
     secDesign: field.sections.filter(S => S.fid !== +k).map(S => [S.slope, S.heading]) }, () => {});
 });
-$('btnAddField').onclick = () => startDraw('addfield');
+$('btnAddField').onclick = () => startFinder(true);
 $('addSaved').onchange = e => {
   const v = e.target.value; e.target.value = ''; if (v === '') return;
   const s = loadSaved()[+v], st = hashToState(s.hash);
@@ -2650,7 +2888,7 @@ function clearField() {
   for (const l of Object.values(field.layers)) l?.remove();
   field = null; stopMapStorm(); renderSoil();
   $('fieldCard').classList.add('hidden');
-  $('readout').classList.add('hidden');
+  $('readout').classList.add('hidden'); $('layoutBox').classList.add('hidden'); showFindCta();
   try { history.replaceState(null, '', location.pathname + location.search); } catch { /* ignore */ }
   drawProfile();
 }
@@ -3303,7 +3541,7 @@ function hoverReadout(latlng) {
   el.textContent = txt; el.classList.remove('hidden');
 }
 map.on('click', e => {
-  if (draw.mode || editing) return;
+  if (draw.mode || editing || finder.on) return;
   const i = fieldCellAt(e.latlng);
   if (i >= 0 && field.sections.length > 1 && field.sec[i] !== field.sel) selectSection(field.sec[i]);
 });
@@ -4791,7 +5029,7 @@ function drawBlocks() {
   for (const b of rec.blocks) {
     const y = sum?.byBlock.get(b.id), col = y != null && sum.max > sum.min ? `rgb(${ramp((y - sum.min) / (sum.max - sum.min), YIELD_RAMP).map(Math.round)})` : BLOCK_COL;
     const poly = L.polygon(b.pts, { color: col, weight: 2, fillColor: col, fillOpacity: y != null ? 0.45 : 0.08 })
-      .on('click', e => { if (draw.mode) return; L.DomEvent.stop(e); openLogFor(b.id); });
+      .on('click', e => { if (draw.mode || finder.on) return; L.DomEvent.stop(e); openLogFor(b.id); });
     poly.bindTooltip(`${esc(b.name)}${b.crop ? ' · ' + esc(b.crop) : ''}${y != null ? ` · ${fmt(y, 1)} ${sum.unitLabel}` : ''}`, { sticky: true });
     grp.addLayer(poly);
   }
@@ -4803,14 +5041,68 @@ function addBlock(pts, name, crop = '') {
   return b;
 }
 // strips across the field, each following the contour of the field's best-fit plane (so each strip sits on similar ground)
-function clipHalf(poly, nx, ny, d) {                                // keep the part of a polygon where nx*x + ny*y ≥ d
-  const out = [];
+// the parts of a polygon where nx*x + ny*y ≥ d, each as its own ring: crossings are paired along the cut line, so an
+// L- or U-shaped field cut across its arms gives two pieces rather than one piece joined by a zero-width bridge
+function clipHalfParts(poly, nx, ny, d) {
+  const s = poly.map(p => nx * p[0] + ny * p[1] - d);
+  if (s.every(v => v >= 0)) return [poly];
+  if (s.every(v => v < 0)) return [];
+  const pts = [];
   for (let i = 0; i < poly.length; i++) {
-    const a = poly[i], b = poly[(i + 1) % poly.length], da = nx * a[0] + ny * a[1] - d, db = nx * b[0] + ny * b[1] - d;
-    if (da >= 0) out.push(a);
-    if ((da >= 0) !== (db >= 0)) { const t = da / (da - db); out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]); }
+    const j = (i + 1) % poly.length, a = poly[i], b = poly[j];
+    if (s[i] >= 0) pts.push({ p: a });
+    if ((s[i] >= 0) !== (s[j] >= 0)) { const t = s[i] / (s[i] - s[j]), q = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]; pts.push({ p: q, exit: s[i] >= 0, pos: -ny * q[0] + nx * q[1] }); }
+  }
+  const xs = pts.filter(o => o.pos !== undefined).sort((a, b) => a.pos - b.pos);
+  for (let k = 0; k + 1 < xs.length; k += 2) { xs[k].mate = xs[k + 1]; xs[k + 1].mate = xs[k]; }
+  const at = new Map(pts.map((o, i) => [o, i])), used = new Uint8Array(pts.length), out = [];
+  for (let st = 0; st < pts.length; st++) {
+    if (used[st]) continue;
+    const ring = []; let i = st, guard = 0;
+    do {
+      used[i] = 1; ring.push(pts[i].p);
+      if (pts[i].exit && pts[i].mate) { const j = at.get(pts[i].mate); if (j === st) break; used[j] = 1; ring.push(pts[j].p); i = (j + 1) % pts.length; }
+      else i = (i + 1) % pts.length;
+    } while (i !== st && !used[i] && ++guard <= pts.length);
+    if (ring.length >= 3) out.push(ring);
   }
   return out;
+}
+const ringAreaArr = r => { let a = 0; for (let i = 0, j = r.length - 1; i < r.length; j = i++) a += (r[j][0] + r[i][0]) * (r[j][1] - r[i][1]); return Math.abs(a / 2); };
+// blocks that follow the water: equal-area halves, again and again. Each cut tries 12 directions and keeps the one that the
+// least water flows across (the upslope area of every cell whose water would cross it), so block edges land on the ridges.
+// Cuts are straight lines, so each block is the field clipped by a few half-planes: easy to stake out and farm.
+function blocksFollowWater(nBlocks) {
+  if (!field?.sections) return setStatus('Analyse a field first.', true);
+  const { g, hyd, fid, zs } = field, W = g.W, side = new Int8Array(fid.length);
+  let made = 0;
+  field.mercRings.forEach((ring, f) => {
+    const cells = []; for (let i = 0; i < fid.length; i++) if (fid[i] === f) cells.push(i);
+    const X = new Float64Array(fid.length), Y = new Float64Array(fid.length); for (const c of cells) { X[c] = cellX(g, c % W); Y[c] = cellY(g, (c / W) | 0); }
+    const zones = [];
+    const split = (list, n, planes) => {
+      if (n === 1 || list.length < 40) return zones.push({ list, planes });
+      const nA = Math.floor(n / 2), frac = nA / n, step = Math.max(1, Math.floor(list.length / 20000));   // the direction search runs on a sample
+      const smp = list.filter((_, k) => k % step === 0); side.fill(0); for (const c of list) side[c] = 1;
+      let best = null;
+      for (let a = 0; a < 12; a++) {
+        const th = a * Math.PI / 12, ct = Math.cos(th), st = Math.sin(th), su = Float64Array.from(smp, c => X[c] * ct + Y[c] * st).sort(), m = su[Math.floor((su.length - 1) * frac)];
+        let cost = 0;
+        for (const c of smp) { const d = hyd.rec[c]; if (d < 0 || !side[d]) continue; if ((X[c] * ct + Y[c] * st < m) !== (X[d] * ct + Y[d] * st < m)) cost += hyd.acc[c]; }
+        if (!best || cost < best.cost) best = { cost, ct, st };
+      }
+      const u = Float64Array.from(list, c => X[c] * best.ct + Y[c] * best.st), m = u.slice().sort()[Math.floor((u.length - 1) * frac)];
+      const lo = [], hi = []; list.forEach((c, k) => (u[k] < m ? lo : hi).push(c));
+      split(lo, nA, [...planes, [-best.ct, -best.st, -m]]); split(hi, n - nA, [...planes, [best.ct, best.st, m]]);
+    };
+    split(cells, nBlocks, []);
+    let num = 0;
+    zones.map(zn => ({ ...zn, z: zn.list.reduce((t, c) => t + zs[c], 0) / (zn.list.length || 1) })).sort((a, b) => b.z - a.z).forEach(zn => {
+      let parts = [ring.map(p => [p.x, p.y])]; for (const [nx, ny, d] of zn.planes) parts = parts.flatMap(q => clipHalfParts(q, nx, ny, d));
+      for (const part of parts.filter(q => ringAreaArr(q) > 25)) { addBlock(part.map(p => unproj(p[0], p[1])), `${field.rings.length > 1 ? field.names[f] + ' ' : ''}Block ${++num}`); made++; }
+    });
+  });
+  setStatus(`${made} blocks laid out following the water, numbered from the highest ground down. Their edges sit on the ridges, so little runoff crosses between them.`);
 }
 function blocksFromField(nBlocks) {
   if (!field?.sections) return setStatus('Analyse a field first.', true);
@@ -4818,10 +5110,10 @@ function blocksFromField(nBlocks) {
   field.mercRings.forEach((ring, f) => {
     const fit = (field.fitByF ||= fitPlanes(field.fid, field.rings.length))[f], h = fit.heading * Math.PI / 180, nx = Math.sin(h), ny = Math.cos(h);   // downhill direction
     const P = ring.map(p => [p.x, p.y]), ds = P.map(p => nx * p[0] + ny * p[1]), d0 = Math.min(...ds), d1 = Math.max(...ds), step = (d1 - d0) / nBlocks;
+    let num = 0;
     for (let k = 0; k < nBlocks; k++) {
-      let part = clipHalf(P, nx, ny, d0 + k * step); part = clipHalf(part, -nx, -ny, -(d0 + (k + 1) * step));
-      if (part.length < 3) continue;
-      addBlock(part.map(p => unproj(p[0], p[1])), `${field.rings.length > 1 ? field.names[f] + ' ' : ''}Block ${k + 1}`); made++;
+      const parts = clipHalfParts(P, nx, ny, d0 + k * step).flatMap(q => clipHalfParts(q, -nx, -ny, -(d0 + (k + 1) * step))).filter(q => ringAreaArr(q) > 25);
+      for (const part of parts) { addBlock(part.map(p => unproj(p[0], p[1])), `${field.rings.length > 1 ? field.names[f] + ' ' : ''}Block ${++num}`); made++; }
     }
   });
   setStatus(`${made} blocks laid out along the contour, numbered from the top of each field down. Rename them and set their crops in Records.`);
@@ -5180,7 +5472,19 @@ $('hBlock').addEventListener('change', fillPlanted);
 $('hCrop').addEventListener('change', fillPlanted);
 $('hList').addEventListener('click', e => { const id = e.target.dataset.hdel; if (id && confirm('Delete this harvest record?')) { rec.harvests = rec.harvests.filter(h => h.id !== id); saveRec(); renderRecords(); } });
 $('btnBlock').onclick = () => startDraw('block');
-$('btnBlocksAuto').onclick = () => { const n = parseInt(prompt('How many blocks across each field? They run along the contour, so each one sits on similar ground.', '6'), 10); if (n > 0 && n <= 60) blocksFromField(n); };
+const LY_NOTE = { contour: 'Strips across the slope, numbered from the top: each block sits on similar ground.',
+  water: 'Equal-area blocks cut along the ridges, so little runoff crosses from one block into the next. Handy for keeping a washout, or manure runoff, in one block.' };
+$('btnBlocksAuto').onclick = () => {
+  if (!field?.sections) return setStatus('Analyse a field first, then lay out blocks on it.', true);
+  $('layoutBox').classList.toggle('hidden'); $('lyNote').textContent = LY_NOTE[$('lyHow').value];
+};
+$('lyHow').addEventListener('change', () => { $('lyNote').textContent = LY_NOTE[$('lyHow').value]; });
+$('lyGo').onclick = () => {
+  const n = Math.round(+$('lyN').value);
+  if (!(n >= 2 && n <= 40)) return setStatus('Pick between 2 and 40 blocks per field.', true);
+  ($('lyHow').value === 'water' ? blocksFollowWater : blocksFromField)(n);
+  $('layoutBox').classList.add('hidden');
+};
 $('hExport').onclick = () => downloadBlob('harvest-log.csv', new Blob([harvestCSV()], { type: 'text/csv' }));
 for (const id of ['ySeason', 'yCrop']) $(id).onchange = () => { $('ySeason').dataset.all = $('ySeason').value === '' ? '1' : ''; renderRecords(); };
 $('hDate').value = today();
@@ -5497,8 +5801,9 @@ const TOUR = [
     body: `<p>The corner badge shows which lidar survey covers the middle of the map, when it was flown, and its quality level. <b>QL1</b> has 8+ laser points per square metre, <b>QL2</b> has 2+. Both are good enough for drainage work.</p>
       <p>Older surveys can miss recent dirt work, so check the date.</p>` },
 
-  { ch: 'Analyse a field', target: () => $('btnField'), title: 'Draw a field',
-    body: `<p>Click <b>Draw field</b>, then click the field's corners on the map. Click the first corner again (or double-click) to finish. Standing in the field with a phone? Walk to each corner and tap <b>My spot</b>.</p>
+  { ch: 'Analyse a field', target: () => $('btnField'), title: 'Find or draw a field',
+    body: `<p><b>Find a field</b> shows field outlines mapped from satellite images: tap one or several, then <b>Analyse</b>. They're good on full-size fields but often miss small vegetable plots, and edges can be off by 10–20 m, so check them; <b>Edit shape</b> moves the corners.</p>
+      <p>Or <b>Draw field</b> and click its corners. Standing in the field with a phone? Walk to each corner and tap <b>My spot</b>.</p>
       <p>You can also <b>Import boundary file</b> (Google Earth, shapefile, GeoJSON), use a GPS track, or analyse a landowner parcel, all covered later.</p>`,
     demo: ['Analyse the sample field', ensureDemoField] },
   { ch: 'Analyse a field', needs: 'field', pane: 'field', rect: fieldRect, title: 'Where the water goes',
@@ -5636,7 +5941,8 @@ const CH_NOTE = { 'Getting around': 'Search, lidar, survey dates', 'Analyse a fi
 const tour = { i: -1, seq: 0, raf: 0, swiped: false, saved: null, baseWas: null, sample: 0 };
 function startTour(at = 0) {
   if (draw.mode) cancelDraw();
-  $('tourPop').classList.remove('hidden'); $('tourSpot').classList.remove('hidden');
+  stopFinder();
+  $('tourPop').classList.remove('hidden'); $('tourSpot').classList.remove('hidden'); showFindCta();
   $('tourDots').innerHTML = TOUR.map((_, k) => `<i data-k="${k}"></i>`).join('');
   if (tour.i < 0 && !tour.saved) tourSave();
   prefetchField(tourSample().field);                // download the sample field's lidar while the welcome is read
@@ -5648,7 +5954,7 @@ function startTour(at = 0) {
 async function endTour() {
   const s = TOUR[tour.i];
   tour.seq++; cancelAnimationFrame(tour.raf);
-  $('tourPop').classList.add('hidden'); $('tourSpot').classList.add('hidden');
+  $('tourPop').classList.add('hidden'); $('tourSpot').classList.add('hidden'); showFindCta();
   try { localStorage.setItem(TOUR_KEY, 'seen'); } catch { /* ignore */ }
   tour.i = -1;
   try { await s?.leave?.(); } catch { /* ignore */ }
