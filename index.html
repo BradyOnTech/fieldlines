@@ -328,7 +328,11 @@
     box-shadow: 0 0 0 9999px rgba(0, 0, 0, .38); transition: all .25s ease; }
   #tourSpot.none { border-color: transparent; }
   #tourPop { position: fixed; z-index: 2600; width: 340px; max-width: calc(100vw - 24px); background: #fff; border-radius: 14px;
-    padding: 16px 18px 14px; box-shadow: 0 0 0 .5px rgba(0, 0, 0, .12), 0 18px 50px rgba(0, 0, 0, .3); transition: left .25s ease, top .25s ease; }
+    padding: 16px 18px 14px; box-shadow: 0 0 0 .5px rgba(0, 0, 0, .12), 0 18px 50px rgba(0, 0, 0, .3); transition: left .25s ease, top .25s ease;
+    display: flex; flex-direction: column; max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); }
+  #tourPop > * { flex: none; }
+  #tourPop > .tp-body { flex: 0 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin-right: -6px; padding-right: 6px; }
+  #tourPop > .tp-body.more { -webkit-mask-image: linear-gradient(#000 calc(100% - 36px), transparent); mask-image: linear-gradient(#000 calc(100% - 36px), transparent); }
   #tourPop.wide { width: 470px; }
   #tourPop h3 { margin: 4px 0 6px; font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
   .tp-ch { display: flex; justify-content: space-between; color: var(--accent); font-size: 12px; font-weight: 600; }
@@ -382,7 +386,10 @@
     #paneTitle { font-size: 18px; margin-bottom: 8px; }
     #lidarInfo { max-width: 60%; bottom: calc(var(--sideH) + 36px); }
     .leaflet-control-attribution { font-size: 9.5px; }
-    #tourPop, #tourPop.wide { left: 12px !important; right: 12px; top: 12px !important; bottom: auto; width: auto; }
+    #tourPop, #tourPop.wide { left: 12px !important; right: 12px; width: auto; padding: 14px 16px 12px; }
+    #tourPop .tp-dots { display: none; }
+    #tourPop .tp-nav button, #tourPop .tp-demo button { min-height: 44px; }
+    #tourPop .tp-body { font-size: 14px; }
     #drawbar, #pickbar { left: 10px; right: 62px; transform: none; flex-wrap: wrap; white-space: normal; padding: 8px; }
     #drawbar span, #pickbar span { flex: 1 0 100%; margin: 0 0 2px 4px; font-size: 13px; }
     #drawbar button, #pickbar button { flex: 1; white-space: nowrap; padding: 0 8px; }
@@ -5787,8 +5794,8 @@ const TOUR = [
     body: `<p>FieldLines reads free USGS <b>lidar</b> (laser-scanned bare ground) to show how water moves across your ground, where it ponds or washes, and where beds, orchards, waterways, ponds or a high tunnel will sit best.</p>
       <p>This tour points at each part of the screen. Most steps have a <b>Show me</b> button that runs the feature on a sample field: about 30 acres of open, rolling cropland near Viroqua, in Wisconsin's Driftless Area. You see real results without drawing anything, and each step clears the last one's layers so the map stays readable.</p>
       <p>On the field steps, <b>Show another field</b> switches to a second sample: small family vegetable plots on nearly flat ground in Minnesota, where the runoff is much harder to spot.</p>
-      <p>The icons down the left open each part of the app: <b>Map</b>, <b>Layers</b>, <b>Draw</b>, <b>Field</b>, <b>Pins</b> and <b>Profile</b>. Click the open one again to tuck the panel away.</p>
-      <p>Jump to a chapter, or press <b>Next</b> to start at the top. Use ← → keys to move, Esc to leave.</p>`, chapters: true },
+      <p>The icons down the left (along the bottom on a phone) open each part of the app: <b>Map</b>, <b>Layers</b>, <b>Draw</b>, <b>Field</b>, <b>Pins</b> and <b>Profile</b>. Tap the open one again to tuck the panel away.</p>
+      <p>Jump to a chapter, or press <b>Next</b> to start at the top. On a keyboard, ← → move and Esc leaves.</p>`, chapters: true },
 
   { ch: 'Getting around', target: () => $('search'), title: 'Find your ground',
     body: `<p>Type a town, road or address and press <b>Enter</b>. You can also paste coordinates like <code>43.58, -90.85</code>.</p><p>Scroll or pinch to zoom, drag to pan.</p>` },
@@ -6011,7 +6018,18 @@ function tourRect() {
 }
 function placeTour() {
   if (tour.i < 0) return;
-  const r = tourRect(), spot = $('tourSpot'), pop = $('tourPop'), W = innerWidth, H = innerHeight, pw = pop.offsetWidth, ph = pop.offsetHeight, gap = 14, pad = 6;
+  const tb = $('tourBody'); tb.classList.toggle('more', tb.scrollHeight - tb.scrollTop - tb.clientHeight > 4);   // fade the bottom edge while there's more to scroll
+  const r = tourRect(), spot = $('tourSpot'), pop = $('tourPop'), W = innerWidth, H = innerHeight, gap = 14, pad = 6;
+  if (W <= 760) {                                 // phone: full-width card above or below whatever it points at; the text scrolls, the buttons stay put
+    const above = r ? r.top - gap - 12 : H, below = r ? H - r.bottom - gap - 12 : 0;
+    pop.style.maxHeight = (r ? Math.max(above, below, Math.round(H * .62)) : H - 24) + 'px';   // a huge target (the map) still leaves room to read
+    pop.style.top = (above >= below ? 12 : H - 12 - pop.offsetHeight) + 'px';
+    if (!r) { Object.assign(spot.style, { left: W / 2 + 'px', top: H / 2 + 'px', width: '0px', height: '0px' }); spot.classList.add('none'); }
+    else { spot.classList.remove('none'); Object.assign(spot.style, { left: r.left - pad + 'px', top: r.top - pad + 'px', width: r.width + 2 * pad + 'px', height: r.height + 2 * pad + 'px' }); }
+    return;
+  }
+  pop.style.maxHeight = '';
+  const pw = pop.offsetWidth, ph = pop.offsetHeight;
   if (!r) {                                       // nothing to point at: dim everything, centre the card
     Object.assign(spot.style, { left: W / 2 + 'px', top: H / 2 + 'px', width: '0px', height: '0px' }); spot.classList.add('none');
     Object.assign(pop.style, { left: (W - pw) / 2 + 'px', top: Math.max(12, (H - ph) / 2) + 'px' });
